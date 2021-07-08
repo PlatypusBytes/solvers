@@ -35,9 +35,7 @@ pipelines:
                       BITBUCKET_USERNAME: $BITBUCKET_USERNAME
                       BITBUCKET_APP_PASSWORD: $BITBUCKET_APP_PASSWORD
                       FILENAME: "test-reports/coverage.zip"
-     
-        
-                pytest --cov=CPTtool ./unit_test --cov-report html:code_coverage
+
 definitions:
    caches:
      conda: ~/.conda/envs/solvers
