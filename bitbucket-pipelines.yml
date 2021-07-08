@@ -26,7 +26,8 @@ pipelines:
             script:
                 # - conda env update -n solvers --file env_solvers.yml
                 - conda activate solvers
-                - pytest -v --cov=solvers --cov-report html:test-reports/coverage tests -m "not workinprogress"
+                - pytest --cov=solvers ./tests --cov-report html:test-reports/code_coverage
+                #- pytest -v --cov=solvers --cov-report html:test-reports/coverage tests -m "not workinprogress"
                 - apt-get update && apt-get --yes install zip
                 - zip -r test-reports/coverage.zip test-reports/coverage
                 - pipe: atlassian/bitbucket-upload-file:0.3.1
@@ -36,6 +37,7 @@ pipelines:
                       FILENAME: "test-reports/coverage.zip"
      
         
+                pytest --cov=CPTtool ./unit_test --cov-report html:code_coverage
 definitions:
    caches:
      conda: ~/.conda/envs/solvers
