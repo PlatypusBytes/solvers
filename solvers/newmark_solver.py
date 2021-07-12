@@ -4,7 +4,7 @@ import numpy as np
 from numpy.linalg import solve, inv
 from scipy.sparse.linalg import spsolve
 from scipy.sparse.linalg import inv as sp_inv
-from scipy.sparse import issparse
+from scipy.sparse import issparse, csc_matrix
 import os
 import pickle
 from tqdm import tqdm
@@ -107,7 +107,6 @@ class NewmarkSolver(Solver):
         gamma = self.gamma
 
         # initial force conditions: for computation of initial acceleration
-
         if issparse(F):
             d_force = F[:, t_start_idx].toarray()[:, 0]
         else:
@@ -117,8 +116,11 @@ class NewmarkSolver(Solver):
         u = self.u0
         v = self.v0
         a = self.calculate_initial_acceleration(M, C, K, d_force, u, v)
-        # add to results initial conditions
 
+        # initialise delta velocity
+        dv = np.zeros(len(v))
+
+        # add to results initial conditions
         self.u[t_start_idx, :] = u
         self.v[t_start_idx, :] = v
         self.a[t_start_idx, :] = a
@@ -140,6 +142,13 @@ class NewmarkSolver(Solver):
             F_previous = F[:, t_start_idx].toarray()[:, 0]
         else:
             F_previous = F[:, t_start_idx]
+
+        # initialise absorbing boundary if not initialised
+        if self.absorbing_boundary is None:
+            if self._is_sparse_calculation:
+                self.absorbing_boundary = csc_matrix(K.shape)
+            else:
+                self.absorbing_boundary = np.zeros(K.shape)
 
         # iterate for each time step
         for t in range(t_start_idx + 1, t_end_idx + 1):
@@ -163,7 +172,7 @@ class NewmarkSolver(Solver):
                 F_previous = F[:, t]
 
             # external force
-            force_ext = d_force + m_part + c_part
+            force_ext = d_force + m_part + c_part - self.absorbing_boundary * dv
 
             # solve
             if self._is_sparse_calculation:

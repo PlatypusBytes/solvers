@@ -58,6 +58,8 @@ class Solver:
         self.mass_func = None
         self.damping_func = None
 
+        self.absorbing_boundary = None
+
         self.output_interval = 10
         self.u_out = []
         self.v_out = []
