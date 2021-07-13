@@ -172,7 +172,7 @@ class NewmarkSolver(Solver):
                 F_previous = F[:, t]
 
             # external force
-            force_ext = d_force + m_part + c_part - self.absorbing_boundary * dv
+            force_ext = d_force + m_part + c_part - self.absorbing_boundary.dot(dv.T)
 
             # solve
             if self._is_sparse_calculation:
