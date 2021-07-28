@@ -221,3 +221,43 @@ class TestNewmark(unittest.TestCase):
             np.round(res.u[-1], 2), np.round(np.array([1, 3]), 2)
         )
         return
+
+    def test_load_function(self):
+        """
+        Test if Newmark solver returns equal results while using a load function and an initial force matrix. The load
+        function is chosen such that at each time step it calculates the same value as the tested force matrix at that
+        time step.
+        :return:
+        """
+
+        def load_function(u,t):
+            # half load each time step
+            self.F[:, ] = self.F[:,t-1] * 0.5
+            return self.F[:, t].toarray()[:,0]
+
+        # manually make force matrix
+        force_matrix = np.zeros(self.F.shape)
+        force_matrix[:, 0] = self.F.toarray()[:,0]
+        for i in range(1, force_matrix.shape[1]):
+            force_matrix[:, i] = force_matrix[:, i-1]/2
+
+        # calculate using custom load function
+        res_func = NewmarkSolver()
+        res_func.load_func = load_function
+        res_func.beta = self.settings["beta"]
+        res_func.gamma = self.settings["gamma"]
+        res_func.initialise(self.number_eq, self.time)
+        res_func.calculate(self.M, self.C, self.K, self.F, 0, self.n_steps)
+
+        # calculate using initial load matrix
+        res_manual = NewmarkSolver()
+        res_manual.beta = self.settings["beta"]
+        res_manual.gamma = self.settings["gamma"]
+        res_manual.initialise(self.number_eq, self.time)
+        res_manual.calculate(self.M, self.C, self.K, force_matrix, 0, self.n_steps)
+
+        # check if solutions are equal
+        np.testing.assert_array_almost_equal(res_func.u, res_manual.u)
+
+
+
