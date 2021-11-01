@@ -1,5 +1,7 @@
 import numpy as np
 from scipy.sparse import issparse, csc_matrix
+from pypardiso import spsolve as pypardiso_solver
+from scipy.sparse.linalg import spsolve as scipy_solver
 
 import os
 import pickle
@@ -69,6 +71,7 @@ class Solver:
         self.number_equations = None
 
         self._is_sparse_calculation = None
+        self.sparse_solver = pypardiso_solver # pypardiso_solver or scipy_solver
 
     def check_for_sparse(self, M, C, K):
         # check if sparse calculation should be performed

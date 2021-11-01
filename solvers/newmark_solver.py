@@ -2,14 +2,14 @@ from solvers.base_solver import Solver
 
 import numpy as np
 from numpy.linalg import solve, inv
-from scipy.sparse.linalg import spsolve
+from pypardiso import spsolve as pypardiso_solver
+from scipy.sparse.linalg import spsolve as scipy_solver
 from scipy.sparse.linalg import inv as sp_inv
 from scipy.sparse import issparse, csc_matrix
 import os
 import pickle
 from tqdm import tqdm
 import logging
-
 
 class NewmarkSolver(Solver):
     """
@@ -46,7 +46,7 @@ class NewmarkSolver(Solver):
 
         # initial acceleration
         if self._is_sparse_calculation:
-            a = sp_inv(m_global).dot(force_ini - c_part - k_part)
+            a = self.sparse_solver(m_global.astype(float), force_ini - c_part - k_part)
         else:
             a = inv(m_global).dot(force_ini - c_part - k_part)
 
@@ -176,11 +176,11 @@ class NewmarkSolver(Solver):
 
             # solve
             if self._is_sparse_calculation:
-                du = spsolve(K_till, force_ext)
+                du = self.sparse_solver(K_till, force_ext)
             else:
                 du = solve(K_till, force_ext)
 
-                # velocity calculated through Newmark relation
+            # velocity calculated through Newmark relation
             dv = (
                 du.dot(gamma / (beta * t_step))
                 - v.dot(gamma / beta)
