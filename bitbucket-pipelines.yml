@@ -24,7 +24,7 @@ pipelines:
                 - conda
                 - pip
             script:
-                # - conda env update -n solvers --file env_solvers.yml
+                - conda env update -n solvers --file env_solvers.yml
                 - conda activate solvers
                 #- pytest --cov=solvers ./tests --cov-report html:test-reports/code_coverage
                 - pytest -v --cov=solvers ./tests --cov-report html:test-reports/coverage tests -m "not workinprogress"
