@@ -75,12 +75,9 @@ class Solver:
 
     def check_for_sparse(self, M, C, K):
         # check if sparse calculation should be performed
-        if issparse(M) and issparse(C) and issparse(K):
+        if issparse(M) or issparse(C) or issparse(K):
             self._is_sparse_calculation = True
-        elif issparse(M) or issparse(C) or issparse(K):
-            self._is_sparse_calculation = True
-
-            Warning("One but not all matrices is sparse, converting other matrices to csc sparse matrices")
+            Warning("Converting matrices to csc sparse matrices")
 
             M = csc_matrix(M)
             C = csc_matrix(C)
