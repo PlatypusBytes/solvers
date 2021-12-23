@@ -94,6 +94,7 @@ class NewmarkSolver(Solver):
         # check if sparse calculation should be performed
         M, C, K = self.check_for_sparse(M, C, K)
 
+        self.update_output_arrays(t_start_idx, t_end_idx)
         # validate solver index
         self.validate_input(F, t_start_idx, t_end_idx)
 
@@ -120,11 +121,14 @@ class NewmarkSolver(Solver):
         # initialise delta velocity
         dv = np.zeros(len(v))
 
+        output_time_idx = np.where(self.output_time_indices == t_start_idx)[0][0]
+        t2 = output_time_idx + 1
+
         # add to results initial conditions
-        self.u[t_start_idx, :] = u
-        self.v[t_start_idx, :] = v
-        self.a[t_start_idx, :] = a
-        self.f[t_start_idx, :] = d_force
+        self.u[output_time_idx, :] = u
+        self.v[output_time_idx, :] = v
+        self.a[output_time_idx, :] = a
+        self.f[output_time_idx, :] = d_force
 
         # combined stiffness matrix
         K_till = K + C.dot(gamma / (beta * t_step)) + M.dot(1 / (beta * t_step ** 2))
@@ -200,9 +204,11 @@ class NewmarkSolver(Solver):
             a = a + da
 
             # add to results
-            self.u[t, :] = u
-            self.v[t, :] = v
-            self.a[t, :] = a
+            if t == self.output_time_indices[t2]:
+                self.u[t2, :] = u
+                self.v[t2, :] = v
+                self.a[t2, :] = a
+                t2 += 1
 
         # calculate nodal force
         self.f[:, :] = np.transpose(K.dot(np.transpose(self.u)))

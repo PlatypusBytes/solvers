@@ -62,11 +62,14 @@ class Solver:
 
         self.absorbing_boundary = None
 
-        self.output_interval = 10
+        self.output_interval = 1
         self.u_out = []
         self.v_out = []
         self.a_out = []
         self.time_out = []
+
+        self.output_time = []
+        self.output_time_indices = []
 
         self.number_equations = None
 
@@ -101,10 +104,20 @@ class Solver:
 
         self.time = np.array(time)
 
-        self.u = np.zeros((len(time), number_equations))
-        self.v = np.zeros((len(time), number_equations))
-        self.a = np.zeros((len(time), number_equations))
-        self.f = np.zeros((len(time), number_equations))
+
+        # find indices of time steps which should be stored based on output interval
+        self.output_time_indices = np.arange(0,len(self.time),self.output_interval)
+
+        # make sure last time step is included
+        if not np.isclose(self.output_time_indices[-1], len(self.time)-1):
+            self.output_time_indices = np.append(self.output_time_indices, len(self.time)-1)
+
+        # initialise result arrays
+        self.output_time = self.time[self.output_time_indices]
+        self.u = np.zeros((len(self.output_time_indices), number_equations))
+        self.v = np.zeros((len(self.output_time_indices), number_equations))
+        self.a = np.zeros((len(self.output_time_indices), number_equations))
+        self.f = np.zeros((len(self.output_time_indices), number_equations))
 
         self.number_equations = number_equations
 
@@ -116,19 +129,54 @@ class Solver:
         :param t_start_idx: start time index of current stage
         :return:
         """
-        self.u0 = self.u[t_start_idx, :]
-        self.v0 = self.v[t_start_idx, :]
+        output_time_idx = np.where(self.output_time_indices == t_start_idx)[0][0]
+
+        self.u0 = self.u[output_time_idx, :]
+        self.v0 = self.v[output_time_idx, :]
+
+    def update_output_arrays(self,t_start_idx, t_end_idx):
+        """
+        Updates output arrays. If either the t_start_idx or t_end_idx is missing in the output indices array, these indices
+        are added.
+        :param t_start_idx: start time index
+        :param t_end_idx: end time index
+        :return:
+        """
+
+        # add start time index if required
+        if t_start_idx not in self.output_time_indices:
+            closest_greater_index = np.where(self.output_time_indices[self.output_time_indices >t_start_idx].min() == self.output_time_indices)[0]
+            self.output_time_indices = np.insert(self.output_time_indices, closest_greater_index, t_start_idx)
+            self.u = np.insert(self.u, closest_greater_index, np.zeros(self.u.shape[1]), axis=0)
+            self.v = np.insert(self.v, closest_greater_index, np.zeros(self.v.shape[1]), axis=0)
+            self.a = np.insert(self.a, closest_greater_index, np.zeros(self.a.shape[1]), axis=0)
+            self.f = np.insert(self.f, closest_greater_index, np.zeros(self.f.shape[1]), axis=0)
+
+            self.output_time = np.insert(self.output_time, closest_greater_index, self.time[t_start_idx])
+
+        # add end time index if required
+        if t_end_idx not in self.output_time_indices:
+            closest_greater_index = np.where(self.output_time_indices[self.output_time_indices >t_end_idx].min() == self.output_time_indices)[0]
+            self.output_time_indices = np.insert(self.output_time_indices, closest_greater_index, t_end_idx)
+            self.u = np.insert(self.u, closest_greater_index, np.zeros(self.u.shape[1]), axis=0)
+            self.v = np.insert(self.v, closest_greater_index, np.zeros(self.v.shape[1]), axis=0)
+            self.a = np.insert(self.a, closest_greater_index, np.zeros(self.a.shape[1]), axis=0)
+            self.f = np.insert(self.f, closest_greater_index, np.zeros(self.f.shape[1]), axis=0)
+
+            self.output_time = np.insert(self.output_time, closest_greater_index, self.time[t_end_idx])
 
     def finalise(self):
         """
         Finalises the solver. Displacements, velocities, accelerations and time are stored at a certain interval.
         :return:
         """
-        self.u_out = self.u[0::self.output_interval,:]
-        self.v_out = self.v[0::self.output_interval,:]
-        self.a_out = self.a[0::self.output_interval,:]
 
-        self.time_out = self.time[0::self.output_interval]
+        pass
+        # self.u_out = self.u[0::self.output_interval,:]
+        # self.v_out = self.v[0::self.output_interval,:]
+        # self.a_out = self.a[0::self.output_interval,:]
+        #
+        # self.time_out = self.time[0::self.output_interval]
 
     def validate_input(self, F, t_start_idx, t_end_idx):
         """
