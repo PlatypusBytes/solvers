@@ -38,7 +38,10 @@ class StaticSolver(Solver):
         # add to results initial conditions
         self.u[t_start_idx, :] = u
         # initial differential force
-        d_force = F[:, t_start_idx]
+        if t_start_idx > 0:
+            d_force = F[:, t_start_idx] - F[:, t_start_idx - 1]
+        else:
+            d_force = F[:, t_start_idx]
 
         # validate input
         self.validate_input(F, t_start_idx, t_end_idx)
