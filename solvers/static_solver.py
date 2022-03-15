@@ -37,11 +37,6 @@ class StaticSolver(Solver):
         u = self.u0
         # add to results initial conditions
         self.u[t_start_idx, :] = u
-        # initial differential force
-        if t_start_idx > 0:
-            d_force = F[:, t_start_idx] - F[:, t_start_idx - 1]
-        else:
-            d_force = F[:, t_start_idx]
 
         # validate input
         self.validate_input(F, t_start_idx, t_end_idx)
@@ -58,14 +53,14 @@ class StaticSolver(Solver):
             # update progress bar
             pbar.update(1)
 
+            # update external force
+            d_force = F[:, t] - F[:, t - 1]
+
             # solve
             uu = spsolve(K, d_force)
 
             # update displacement
             u = u + uu
-
-            # update external force
-            d_force = F[:, t] - F[:, t - 1]
 
             # add to results
             self.u[t, :] = u
