@@ -5,7 +5,7 @@ import pickle
 
 import numpy as np
 from scipy.sparse.linalg import spsolve, inv
-from scipy.sparse import issparse
+from scipy.sparse import issparse, csc_matrix
 
 from tqdm import tqdm
 import logging
@@ -21,7 +21,7 @@ class StaticSolver(Solver):
     def __init__(self):
         super(StaticSolver, self).__init__()
 
-    def calculate(self, K, F, t_start_idx, t_end_idx):
+    def calculate(self, K, F, t_start_idx, t_end_idx, F_ini=None):
         """
         Static integration scheme.
         Incremental formulation.
@@ -49,12 +49,19 @@ class StaticSolver(Solver):
             unit="steps",
         )
 
+        # set initial incremental external force
+        if F_ini is None:
+            F_ini = np.zeros(F[:, 0].shape[0])
+        if issparse(F[:, 0]):
+            F_ini = csc_matrix(F_ini).T
+        d_force_ini= F[:, 0] -F_ini
+
         for t in range(t_start_idx + 1, t_end_idx + 1):
             # update progress bar
             pbar.update(1)
 
             # update external force
-            d_force = F[:, t] - F[:, t - 1]
+            d_force = d_force_ini + F[:, t] - F[:, t - 1]
 
             # solve
             uu = spsolve(K, d_force)
@@ -64,6 +71,8 @@ class StaticSolver(Solver):
 
             # add to results
             self.u[t, :] = u
+
+            d_force_ini = 0
 
         # close the progress bar
         pbar.close()
