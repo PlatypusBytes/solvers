@@ -131,7 +131,7 @@ class NewmarkSolver(Solver):
         self.f[output_time_idx, :] = d_force
 
         # combined stiffness matrix
-        K_till = K + C.dot(gamma / (beta * t_step)) + M.dot(1 / (beta * t_step ** 2))
+        K_till = K + C * (gamma / (beta * t_step)) + M * (1 / (beta * t_step ** 2))
 
         # define progress bar
         pbar = tqdm(
@@ -160,10 +160,10 @@ class NewmarkSolver(Solver):
             pbar.update(1)
 
             # updated mass
-            m_part = v.dot(1 / (beta * t_step)) + a.dot(1 / (2 * beta))
+            m_part = v * (1 / (beta * t_step)) + a * (1 / (2 * beta))
             m_part = M.dot(m_part)
             # updated damping
-            c_part = v.dot(gamma / beta) + a.dot(t_step * (gamma / (2 * beta) - 1))
+            c_part = v * (gamma / beta) + a * (t_step * (gamma / (2 * beta) - 1))
             c_part = C.dot(c_part)
 
             # update external force
@@ -186,16 +186,16 @@ class NewmarkSolver(Solver):
 
             # velocity calculated through Newmark relation
             dv = (
-                du.dot(gamma / (beta * t_step))
-                - v.dot(gamma / beta)
-                + a.dot(t_step * (1 - gamma / (2 * beta)))
+                du * (gamma / (beta * t_step))
+                - v * (gamma / beta)
+                + a * (t_step * (1 - gamma / (2 * beta)))
             )
 
             # acceleration calculated through Newmark relation
             da = (
-                du.dot(1 / (beta * t_step ** 2))
-                - v.dot(1 / (beta * t_step))
-                - a.dot(1 / (2 * beta))
+                du * (1 / (beta * t_step ** 2))
+                - v * (1 / (beta * t_step))
+                - a * (1 / (2 * beta))
             )
 
             # update variables
