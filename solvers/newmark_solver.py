@@ -77,6 +77,186 @@ class NewmarkSolver(Solver):
 
         return d_force, F_total
 
+
+class NewmarkImplicitForce(NewmarkSolver):
+
+    def __init__(self):
+        super(NewmarkImplicitForce, self).__init__()
+        self.max_iter = 15
+        self.tolerance = 1e-5
+
+    def calculate(self, M, C, K, F, t_start_idx, t_end_idx):
+        """
+        Newmark implicit integration scheme with Newton Raphson strategy for non-linear force.
+        Incremental formulation.
+
+        :param M: Mass matrix
+        :param C: Damping matrix
+        :param K: Stiffness matrix
+        :param F: External force matrix
+        :param t_start_idx: time index of starting time for the stage analysis
+        :param t_end_idx: time index of end time for the stage analysis
+        :return:
+        """
+
+        # check if sparse calculation should be performed
+        M, C, K = self.check_for_sparse(M, C, K)
+
+        self.update_output_arrays(t_start_idx, t_end_idx)
+        # validate solver index
+        self.validate_input(F, t_start_idx, t_end_idx)
+
+        # calculate time step size
+        # todo correct t_step, as it is not correct, but tests succeed
+        t_step = (self.time[t_end_idx] - self.time[t_start_idx]) / (
+            (t_end_idx - t_start_idx))
+
+        # constants for the Newmark integration
+        beta = self.beta
+        gamma = self.gamma
+
+        # initial force conditions: for computation of initial acceleration
+        if issparse(F):
+            d_force = F[:, t_start_idx].toarray()[:, 0]
+        else:
+            d_force = F[:, t_start_idx]
+
+        d_force_prev = np.copy(d_force)
+        # initial conditions u, v, a
+        u = self.u0
+        v = self.v0
+        a = self.calculate_initial_acceleration(M, C, K, d_force, u, v)
+
+        # initialise delta velocity
+        dv = np.zeros(len(v))
+
+        output_time_idx = np.where(self.output_time_indices == t_start_idx)[0][0]
+        t2 = output_time_idx + 1
+
+        # add to results initial conditions
+        self.u[output_time_idx, :] = u
+        self.v[output_time_idx, :] = v
+        self.a[output_time_idx, :] = a
+        self.f[output_time_idx, :] = d_force
+
+        # combined stiffness matrix
+        K_till = K + C * (gamma / (beta * t_step)) + M * (1 / (beta * t_step ** 2))
+
+        # define progress bar
+        pbar = tqdm(
+            total=(t_end_idx - t_start_idx),
+            unit_scale=True,
+            unit_divisor=1000,
+            unit="steps",
+        )
+
+        # initialise Force from load function
+        if self.load_func is not None and issparse(F):
+            F_previous = F[:, t_start_idx].toarray()[:, 0]
+        else:
+            F_previous = F[:, t_start_idx]
+
+        # initialise absorbing boundary if not initialised
+        if self.absorbing_boundary is None:
+            if self._is_sparse_calculation:
+                self.absorbing_boundary = csc_matrix(K.shape)
+            else:
+                self.absorbing_boundary = np.zeros(K.shape)
+
+        # iterate for each time step
+        for t in range(t_start_idx + 1, t_end_idx + 1):
+            # update progress bar
+            pbar.update(1)
+
+            # updated mass
+            m_part = v * (1 / (beta * t_step)) + a * (1 / (2 * beta))
+            m_part = M.dot(m_part)
+            # updated damping
+            c_part = v * (gamma / beta) + a * (t_step * (gamma / (2 * beta) - 1))
+            c_part = C.dot(c_part)
+
+            # set ext force from previous time iteration
+            force_ext_prev = d_force + m_part + c_part - self.absorbing_boundary.dot(dv)
+
+            # initialise
+            du_tot = 0
+            i = 0
+            force_previous = 0
+
+            # Newton Raphson loop where force is updated in every iteration
+            converged = False
+            while not converged and i < self.max_iter:
+
+                # update external force
+                if self.load_func is not None:
+                    d_force, F_previous_i = self.update_force(u, F_previous, t)
+                else:
+                    d_force = F[:, t] - F_previous
+                    if issparse(d_force):
+                        d_force = d_force.toarray()[:, 0]
+                    F_previous_i = F[:, t]
+
+                # external force
+                force_ext = d_force + m_part + c_part - self.absorbing_boundary.dot(dv)
+
+                # solve
+                if self._is_sparse_calculation:
+                    du = self.sparse_solver(K_till, force_ext - force_previous)
+                else:
+                    du = solve(K_till, force_ext)
+
+                # set du for first iteration
+                if i == 0:
+                    du_ini = np.copy(du)
+
+                # energy converge criterion according to bath 1996, chapter 8.4.4
+                error = np.linalg.norm(du * force_ext) / np.linalg.norm(du_ini * force_ext_prev)
+                converged = (error < self.tolerance)
+
+                # calculate total du for current time step
+                du_tot += du
+
+                # velocity calculated through Newmark relation
+                dv = (
+                        du_tot * (gamma / (beta * t_step))
+                        - v * (gamma / beta)
+                        + a * (t_step * (1 - gamma / (2 * beta)))
+                )
+
+                u += du
+
+                if not converged:
+                    force_previous = np.copy(force_ext)
+
+                i += 1
+
+            # acceleration calculated through Newmark relation
+            da = (
+                    du_tot * (1 / (beta * t_step ** 2))
+                    - v * (1 / (beta * t_step))
+                    - a * (1 / (2 * beta))
+            )
+
+            F_previous = F_previous_i
+            # update variables
+
+            v = v + dv
+            a = a + da
+
+            # add to results
+            if t == self.output_time_indices[t2]:
+                self.u[t2, :] = u
+                self.v[t2, :] = v
+                self.a[t2, :] = a
+                t2 += 1
+
+        # calculate nodal force
+        self.f[:, :] = np.transpose(K.dot(np.transpose(self.u)))
+        # close the progress bar
+        pbar.close()
+
+class NewmarkExplicit(NewmarkSolver):
+
     def calculate(self, M, C, K, F, t_start_idx, t_end_idx):
         """
         Newmark integration scheme.
@@ -214,4 +394,5 @@ class NewmarkSolver(Solver):
         self.f[:, :] = np.transpose(K.dot(np.transpose(self.u)))
         # close the progress bar
         pbar.close()
+
 

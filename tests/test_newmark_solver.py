@@ -2,8 +2,9 @@
 # tests based on Bathe
 # for newmark pg 782
 import unittest
+import pytest
 
-from solvers.newmark_solver import NewmarkSolver
+from solvers.newmark_solver import NewmarkSolver, NewmarkExplicit, NewmarkImplicitForce
 
 from tests.utils import *
 
@@ -56,8 +57,8 @@ class TestNewmark(unittest.TestCase):
         np.testing.assert_array_equal(acc, np.array([0, 10]))
         return
 
-    def run_newmark_test(self):
-        res = NewmarkSolver()
+    def run_newmark_explicit_test(self):
+        res = NewmarkExplicit()
 
         res.beta = self.settings["beta"]
         res.gamma = self.settings["gamma"]
@@ -93,18 +94,18 @@ class TestNewmark(unittest.TestCase):
     def test_sparse_solver_newmark(self):
         self.M, self.K, self.C, self.F = set_matrices_as_sparse(self.M, self.K, self.C, self.F)
         # set_matrices_as_sparse()
-        self.run_newmark_test()
+        self.run_newmark_explicit_test()
 
     def test_np_array_solver_newmark(self):
         self.M, self.K, self.C, self.F = set_matrices_as_np_array(self.M, self.K, self.C, self.F)
-        self.run_newmark_test()
+        self.run_newmark_explicit_test()
 
-    def run_test_solver_newmark_two_stages(self):
+    def run_test_solver_newmark_two_stages_explicit(self):
         """
                Test newmark solver with 2 stages, where the different stages have different time steps
                :return:
                """
-        res = NewmarkSolver()
+        res = NewmarkExplicit()
 
         res.beta = self.settings["beta"]
         res.gamma = self.settings["gamma"]
@@ -173,15 +174,15 @@ class TestNewmark(unittest.TestCase):
 
     def test_np_array_solver_newmark_two_stages(self):
         self.M, self.K, self.C, self.F = set_matrices_as_np_array(self.M, self.K, self.C, self.F)
-        self.run_test_solver_newmark_two_stages()
+        self.run_test_solver_newmark_two_stages_explicit()
 
     def test_sparse_solver_newmark_two_stages(self):
         self.M, self.K, self.C, self.F = set_matrices_as_sparse(self.M, self.K, self.C, self.F)
-        self.run_test_solver_newmark_two_stages()
+        self.run_test_solver_newmark_two_stages_explicit()
 
-    def test_solver_newmark_static(self):
+    def test_solver_newmark_static_explicit(self):
         # with damping solution converges to the static one
-        res = NewmarkSolver()
+        res = NewmarkExplicit()
 
         n_steps = 500
         t_total = n_steps * self.t_step
@@ -222,7 +223,7 @@ class TestNewmark(unittest.TestCase):
         )
         return
 
-    def test_load_function(self):
+    def test_load_function_explicit(self):
         """
         Test if Newmark solver returns equal results while using a load function and an initial force matrix. The load
         function is chosen such that at each time step it calculates the same value as the tested force matrix at that
@@ -232,7 +233,7 @@ class TestNewmark(unittest.TestCase):
 
         def load_function(u,t):
             # half load each time step
-            self.F[:, ] = self.F[:,t-1] * 0.5
+            self.F[:, t] = self.F[:,t-1] * 0.5
             return self.F[:, t].toarray()[:,0]
 
         # manually make force matrix
@@ -242,7 +243,7 @@ class TestNewmark(unittest.TestCase):
             force_matrix[:, i] = force_matrix[:, i-1]/2
 
         # calculate using custom load function
-        res_func = NewmarkSolver()
+        res_func = NewmarkExplicit()
         res_func.load_func = load_function
         res_func.beta = self.settings["beta"]
         res_func.gamma = self.settings["gamma"]
@@ -250,7 +251,7 @@ class TestNewmark(unittest.TestCase):
         res_func.calculate(self.M, self.C, self.K, self.F, 0, self.n_steps)
 
         # calculate using initial load matrix
-        res_manual = NewmarkSolver()
+        res_manual = NewmarkExplicit()
         res_manual.beta = self.settings["beta"]
         res_manual.gamma = self.settings["gamma"]
         res_manual.initialise(self.number_eq, self.time)
@@ -259,5 +260,29 @@ class TestNewmark(unittest.TestCase):
         # check if solutions are equal
         np.testing.assert_array_almost_equal(res_func.u, res_manual.u)
 
+    @pytest.mark.workinprogress
+    def test_load_function_implicit(self):
+        """
+        Test if Newmark solver returns equal results while using a load function and implicit Newmark solver and an
+        initial force matrix. The load function is chosen such that at each time step it calculates the same value as
+        the tested force matrix at that time step.
+        :return:
+        """
 
+        def load_function(u,t):
+            # force is a function of the displacement
+            F = np.sin(u) * 10
 
+            return F
+
+        # calculate using custom load function and implicit Newmark solver
+        res_func = NewmarkImplicitForce()
+        res_func.load_func = load_function
+        res_func.beta = self.settings["beta"]
+        res_func.gamma = self.settings["gamma"]
+        res_func.initialise(2, self.time)
+        res_func.u0 = [np.pi/2,np.pi/2]
+        res_func.u0 = [0, 0]
+
+        F = np.ones((2,len(self.time)))*10
+        res_func.calculate(self.M, self.C, self.K, F, 0, self.n_steps)

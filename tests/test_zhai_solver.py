@@ -2,7 +2,7 @@
 # tests based on Bathe
 # for newmark pg 782
 import unittest
-from solvers.newmark_solver import NewmarkSolver
+from solvers.newmark_solver import NewmarkExplicit
 from solvers.zhai_solver import ZhaiSolver
 
 from tests.utils import *
@@ -55,7 +55,7 @@ class TestZhai(unittest.TestCase):
         self.F = sparse.csc_matrix(np.array(F))
 
         # calculate with Newmark solver
-        expected = NewmarkSolver()
+        expected = NewmarkExplicit()
         expected.initialise(self.number_eq, self.time)
         expected.calculate(self.M, self.C, self.K, self.F, 0, self.n_steps)
 
