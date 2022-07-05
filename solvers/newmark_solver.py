@@ -77,6 +77,22 @@ class NewmarkSolver(Solver):
 
         return d_force, F_total
 
+    def calculate(self, M, C, K, F, t_start_idx, t_end_idx):
+        """
+        Base calculation function of the Newmark Solver. This function does not do any calculation, instead an error
+        message is returned that any of the inherited Newmark solvers should be used.
+
+        :param M: Mass matrix
+        :param C: Damping matrix
+        :param K: Stiffness matrix
+        :param F: External force matrix
+        :param t_start_idx: time index of starting time for the stage analysis
+        :param t_end_idx: time index of end time for the stage analysis
+        :return:
+        """
+        logging.error("Calculate function of the base NewmarkSolver is called. "
+                      "Use 'NewmarkImplicitForce' or 'NewmarkExplicit' instead")
+
 
 class NewmarkImplicitForce(NewmarkSolver):
 
