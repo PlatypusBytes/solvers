@@ -166,9 +166,12 @@ class ZhaiSolver(Solver):
         v = self.v0
         inv_M, a = self.calculate_initial_values(M, C, K, force, u, v)
 
-        self.u[t_start_idx, :] = u
-        self.v[t_start_idx, :] = v
-        self.a[t_start_idx, :] = a
+        output_time_idx = np.where(self.output_time_indices == t_start_idx)[0][0]
+        t2 = output_time_idx + 1
+
+        self.u[output_time_idx, :] = u
+        self.v[output_time_idx, :] = v
+        self.a[output_time_idx, :] = a
 
         a_old = np.zeros(self.number_equations)
 
@@ -208,9 +211,12 @@ class ZhaiSolver(Solver):
             a_new = self.evaluate_acceleration(inv_M, C, K, force, u_new, v_new)
 
             # add to results
-            self.u[t, :] = u_new
-            self.v[t, :] = v_new
-            self.a[t, :] = a_new
+            if t == self.output_time_indices[t2]:
+                self.u[t2, :] = u_new
+                self.v[t2, :] = v_new
+                self.a[t2, :] = a_new
+
+                t2 += 1
 
             # set vectors for next time step
             u = np.copy(u_new)

@@ -75,3 +75,28 @@ class TestZhai(unittest.TestCase):
     def test_np_array_solver_zhai(self):
         self.M, self.K, self.C, self.F = set_matrices_as_np_array(self.M, self.K, self.C, self.F)
         self.run_test_zhai_solver()
+
+    def test_output_interval_zhai(self):
+        self.M, self.K, self.C, self.F = set_matrices_as_np_array(self.M, self.K, self.C, self.F)
+
+        # reshape force vector
+        F = np.zeros((2, self.n_steps + 1))
+        F[1, :] = 10
+        self.F = sparse.csc_matrix(np.array(F))
+
+        output_interval = 10
+
+        # write all output
+        res = ZhaiSolver()
+        res.initialise(self.number_eq, self.time)
+        res.calculate(self.M, self.C, self.K, self.F, 0, self.n_steps)
+        expected_displacement = res.u[0::output_interval,:]
+
+        # write every other step
+        res_2 = ZhaiSolver()
+        res_2.output_interval = output_interval
+        res_2.initialise(self.number_eq, self.time)
+        res_2.calculate(self.M, self.C, self.K, self.F, 0, self.n_steps)
+
+        # assert
+        np.testing.assert_array_almost_equal(expected_displacement, res_2.u)

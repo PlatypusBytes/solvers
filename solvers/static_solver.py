@@ -35,8 +35,12 @@ class StaticSolver(Solver):
 
         # initial conditions u
         u = self.u0
+
+        output_time_idx = np.where(self.output_time_indices == t_start_idx)[0][0]
+        t2 = output_time_idx + 1
+
         # add to results initial conditions
-        self.u[t_start_idx, :] = u
+        self.u[output_time_idx, :] = u
 
         # validate input
         self.validate_input(F, t_start_idx, t_end_idx)
@@ -70,7 +74,9 @@ class StaticSolver(Solver):
             u = u + uu
 
             # add to results
-            self.u[t, :] = u
+            if t == self.output_time_indices[t2]:
+                self.u[t2, :] = u
+                t2 += 1
 
             d_force_ini = 0
 

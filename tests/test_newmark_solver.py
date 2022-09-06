@@ -286,3 +286,53 @@ class TestNewmark(unittest.TestCase):
 
         F = np.ones((2,len(self.time)))*10
         res_func.calculate(self.M, self.C, self.K, F, 0, self.n_steps)
+
+    def test_output_interval_newmark_explicit(self):
+        self.M, self.K, self.C, self.F = set_matrices_as_np_array(self.M, self.K, self.C, self.F)
+
+        # reshape force vector
+        F = np.zeros((2, self.n_steps + 1))
+        F[1, :] = 10
+        self.F = sparse.csc_matrix(np.array(F))
+
+        output_interval = 10
+
+        # write all output
+        res = NewmarkExplicit()
+        res.initialise(self.number_eq, self.time)
+        res.calculate(self.M, self.C, self.K, self.F, 0, self.n_steps)
+        expected_displacement = np.concatenate((res.u[0::output_interval, :], res.u[None, -1, :]), axis=0)
+
+        # write every other step
+        res_2 = NewmarkExplicit()
+        res_2.output_interval = output_interval
+        res_2.initialise(self.number_eq, self.time)
+        res_2.calculate(self.M, self.C, self.K, self.F, 0, self.n_steps)
+
+        # assert
+        np.testing.assert_array_almost_equal(expected_displacement, res_2.u)
+
+    def test_output_interval_newmark_implicit(self):
+        self.M, self.K, self.C, self.F = set_matrices_as_np_array(self.M, self.K, self.C, self.F)
+
+        # reshape force vector
+        F = np.zeros((2, self.n_steps + 1))
+        F[1, :] = 10
+        self.F = sparse.csc_matrix(np.array(F))
+
+        output_interval = 10
+
+        # write all output
+        res = NewmarkImplicitForce()
+        res.initialise(self.number_eq, self.time)
+        res.calculate(self.M, self.C, self.K, self.F, 0, self.n_steps)
+        expected_displacement = np.concatenate((res.u[0::output_interval, :], res.u[None, -1, :]), axis=0)
+
+        # write every other step
+        res_2 = NewmarkImplicitForce()
+        res_2.output_interval = output_interval
+        res_2.initialise(self.number_eq, self.time)
+        res_2.calculate(self.M, self.C, self.K, self.F, 0, self.n_steps)
+
+        # assert
+        np.testing.assert_array_almost_equal(expected_displacement, res_2.u)

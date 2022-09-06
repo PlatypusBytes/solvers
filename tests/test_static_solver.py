@@ -80,3 +80,23 @@ class TestStatic(unittest.TestCase):
     def test_np_array_solver_static(self):
         _, self.K, _, self.F = set_matrices_as_np_array(None, self.K, None, self.F)
         self.run_test_solver_static()
+
+    def test_output_interval_static(self):
+        _, self.K, _, self.F = set_matrices_as_np_array(None, self.K, None, self.F)
+
+        output_interval = 10
+
+        # write all output
+        res = StaticSolver()
+        res.initialise(self.number_eq, self.time)
+        res.calculate(self.K, self.F, 0, self.n_steps)
+        expected_displacement = np.concatenate((res.u[0::output_interval, :], res.u[None, -1, :]), axis=0)
+
+        # write every other step
+        res_2 = StaticSolver()
+        res_2.output_interval = output_interval
+        res_2.initialise(self.number_eq, self.time)
+        res_2.calculate(self.K, self.F, 0, self.n_steps)
+
+        # assert
+        np.testing.assert_array_almost_equal(expected_displacement, res_2.u)
