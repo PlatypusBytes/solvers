@@ -104,7 +104,6 @@ class Solver:
 
         self.time = np.array(time)
 
-
         # find indices of time steps which should be stored based on output interval
         self.output_time_indices = np.arange(0,len(self.time),self.output_interval)
 
@@ -170,13 +169,7 @@ class Solver:
         Finalises the solver. Displacements, velocities, accelerations and time are stored at a certain interval.
         :return:
         """
-
-        pass
-        # self.u_out = self.u[0::self.output_interval,:]
-        # self.v_out = self.v[0::self.output_interval,:]
-        # self.a_out = self.a[0::self.output_interval,:]
-        #
-        # self.time_out = self.time[0::self.output_interval]
+        self.time_out = self.time[self.output_time_indices]
 
     def validate_input(self, F, t_start_idx, t_end_idx):
         """
