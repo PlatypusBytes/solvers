@@ -5,6 +5,7 @@ from numpy.linalg import solve, inv
 from pypardiso import spsolve as pypardiso_solver
 from scipy.sparse.linalg import spsolve as scipy_solver
 from scipy.sparse.linalg import inv as sp_inv
+from scipy.sparse.linalg import splu
 from scipy.sparse import issparse, csc_matrix
 import os
 import pickle
@@ -158,6 +159,11 @@ class NewmarkImplicitForce(NewmarkSolver):
         # combined stiffness matrix
         K_till = K + C * (gamma / (beta * t_step)) + M * (1 / (beta * t_step ** 2))
 
+        if self._is_sparse_calculation:
+            inv_K_till = splu(K_till)
+        else:
+            inv_K_till = inv(K_till)
+
         # define progress bar
         pbar = tqdm(
             total=(t_end_idx - t_start_idx),
@@ -217,9 +223,9 @@ class NewmarkImplicitForce(NewmarkSolver):
 
                 # solve
                 if self._is_sparse_calculation:
-                    du = self.sparse_solver(K_till, force_ext - force_previous)
+                    du = inv_K_till.solve(force_ext - force_previous)
                 else:
-                    du = solve(K_till, force_ext)
+                    du = inv_K_till.dot(force_ext - force_previous)
 
                 # set du for first iteration
                 if i == 0:
@@ -329,6 +335,12 @@ class NewmarkExplicit(NewmarkSolver):
         # combined stiffness matrix
         K_till = K + C * (gamma / (beta * t_step)) + M * (1 / (beta * t_step ** 2))
 
+        # calculate inverse K_till
+        if self._is_sparse_calculation:
+            inv_K_till = splu(K_till)
+        else:
+            inv_K_till = inv(K_till)
+
         # define progress bar
         pbar = tqdm(
             total=(t_end_idx - t_start_idx),
@@ -376,9 +388,9 @@ class NewmarkExplicit(NewmarkSolver):
 
             # solve
             if self._is_sparse_calculation:
-                du = self.sparse_solver(K_till, force_ext)
+                du = inv_K_till.solve(force_ext )
             else:
-                du = solve(K_till, force_ext)
+                du = inv_K_till.dot(force_ext)
 
             # velocity calculated through Newmark relation
             dv = (
