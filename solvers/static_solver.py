@@ -32,6 +32,10 @@ class StaticSolver(Solver):
         :param t_end_idx: time index of end time for the stage analysis
         :return:
         """
+        if F.ndim == 2:
+            self.force_matrix = F
+        else:
+            self.F = F
 
         # initial conditions u
         u = self.u0
@@ -53,19 +57,24 @@ class StaticSolver(Solver):
             unit="steps",
         )
 
+        self.update_time_step(t_start_idx)
+
         # set initial incremental external force
         if F_ini is None:
-            F_ini = np.zeros(F[:, 0].shape[0])
-        if issparse(F[:, 0]):
-            F_ini = csc_matrix(F_ini).T
-        d_force_ini= F[:, 0] -F_ini
+            F_ini = np.zeros_like(self.F)
+        # if issparse(F[:, 0]):
+        #     F_ini = csc_matrix(F_ini).T
+        d_force_ini= self.F - F_ini
+        F_prev = np.copy(self.F)
 
         for t in range(t_start_idx + 1, t_end_idx + 1):
             # update progress bar
             pbar.update(1)
 
+            self.update_time_step(t)
+
             # update external force
-            d_force = d_force_ini + F[:, t] - F[:, t - 1]
+            d_force = d_force_ini + self.F - F_prev
 
             # solve
             uu = spsolve(K, d_force)
@@ -79,6 +88,7 @@ class StaticSolver(Solver):
                 t2 += 1
 
             d_force_ini = 0
+            F_prev = np.copy(self.F)
 
         # close the progress bar
         pbar.close()
