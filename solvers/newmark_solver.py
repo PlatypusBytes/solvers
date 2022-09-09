@@ -64,8 +64,9 @@ class NewmarkSolver(Solver):
         """
 
         # calculates force with custom load function
-        force = self.load_func(u, t)
+        self.update_non_linear_iteration(t,u=u)
 
+        force = self.F
         # Convert force vector to a 1d numpy array
         if issparse(force):
             force = force.toarray()[:, 0]
@@ -116,6 +117,11 @@ class NewmarkImplicitForce(NewmarkSolver):
         :return:
         """
 
+        if F.ndim == 2:
+            self.force_matrix = F
+        else:
+            self.F = F
+
         # check if sparse calculation should be performed
         M, C, K = self.check_for_sparse(M, C, K)
 
@@ -132,16 +138,24 @@ class NewmarkImplicitForce(NewmarkSolver):
         beta = self.beta
         gamma = self.gamma
 
-        # initial force conditions: for computation of initial acceleration
-        if issparse(F):
-            d_force = F[:, t_start_idx].toarray()[:, 0]
-        else:
-            d_force = F[:, t_start_idx]
 
-        d_force_prev = np.copy(d_force)
+
+
         # initial conditions u, v, a
         u = self.u0
         v = self.v0
+
+        self.update_time_step(t_start_idx)
+        self.update_non_linear_iteration(t_start_idx)
+
+        # initial force conditions: for computation of initial acceleration
+        if issparse(self.F):
+            d_force = self.F.toarray()[:, 0]
+        else:
+            d_force = self.F
+
+        d_force_prev = np.copy(d_force)
+
         a = self.calculate_initial_acceleration(M, C, K, d_force, u, v)
 
         # initialise delta velocity
@@ -173,10 +187,11 @@ class NewmarkImplicitForce(NewmarkSolver):
         )
 
         # initialise Force from load function
-        if self.load_func is not None and issparse(F):
-            F_previous = F[:, t_start_idx].toarray()[:, 0]
-        else:
-            F_previous = F[:, t_start_idx]
+        F_previous = np.copy(self.F)
+        # if self.load_func is not None and issparse(F):
+        #     F_previous = F[:, t_start_idx].toarray()[:, 0]
+        # else:
+        #     F_previous = F[:, t_start_idx]
 
         # initialise absorbing boundary if not initialised
         if self.absorbing_boundary is None:
@@ -187,6 +202,8 @@ class NewmarkImplicitForce(NewmarkSolver):
 
         # iterate for each time step
         for t in range(t_start_idx + 1, t_end_idx + 1):
+            self.update_time_step(t)
+
             # update progress bar
             pbar.update(1)
 
@@ -210,13 +227,16 @@ class NewmarkImplicitForce(NewmarkSolver):
             while not converged and i < self.max_iter:
 
                 # update external force
-                if self.load_func is not None:
-                    d_force, F_previous_i = self.update_force(u, F_previous, t)
-                else:
-                    d_force = F[:, t] - F_previous
-                    if issparse(d_force):
-                        d_force = d_force.toarray()[:, 0]
-                    F_previous_i = F[:, t]
+
+                d_force, F_previous_i = self.update_force(u, F_previous, t)
+
+                # if self.load_func is not None:
+                #     d_force, F_previous_i = self.update_force(u, F_previous, t)
+                # else:
+                #     d_force = F[:, t] - F_previous
+                #     if issparse(d_force):
+                #         d_force = d_force.toarray()[:, 0]
+                #     F_previous_i = F[:, t]
 
                 # external force
                 force_ext = d_force + m_part + c_part - self.absorbing_boundary.dot(dv)
@@ -388,7 +408,7 @@ class NewmarkExplicit(NewmarkSolver):
 
             # solve
             if self._is_sparse_calculation:
-                du = inv_K_till.solve(force_ext )
+                du = inv_K_till.solve(force_ext)
             else:
                 du = inv_K_till.dot(force_ext)
 

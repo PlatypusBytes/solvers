@@ -60,6 +60,8 @@ class Solver:
         self.mass_func = None
         self.damping_func = None
 
+        self.force_matrix = None
+
         self.absorbing_boundary = None
 
         self.output_interval = 1
@@ -133,6 +135,30 @@ class Solver:
         self.u0 = self.u[output_time_idx, :]
         self.v0 = self.v[output_time_idx, :]
 
+
+    def update_time_step(self,t, **kwargs):
+
+        if self.load_func is None:
+
+            # define load function, if none is given
+            def load_func(t,**kwargs):
+                if self.force_matrix is not None:
+                    return self.force_matrix[:,t]
+                else:
+                    return self.F
+            self.load_func = load_func
+
+        self.update_non_linear_iteration(t, **kwargs)
+
+    def update_non_linear_iteration(self, t, **kwargs):
+
+        self.F = self.load_func(t)
+
+        if issparse(self.F):
+            self.F = self.F.toarray()[:, 0]
+
+
+
     def update_output_arrays(self,t_start_idx, t_end_idx):
         """
         Updates output arrays. If either the t_start_idx or t_end_idx is missing in the output indices array, these indices
@@ -193,3 +219,10 @@ class Solver:
             if not np.all(np.isclose(diff, diff[0])):
                 logging.error("Solver error: Time steps differ in current stage")
                 raise TimeException("Time steps differ in current stage")
+
+if __name__ == '__main__':
+    solver = Solver()
+
+    solver.force_matrix = np.ones((2,3))
+
+    solver.update_time_step(1)
