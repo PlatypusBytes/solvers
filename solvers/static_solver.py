@@ -32,10 +32,10 @@ class StaticSolver(Solver):
         :param t_end_idx: time index of end time for the stage analysis
         :return:
         """
-        if F.ndim == 2:
-            self.force_matrix = F
-        else:
-            self.F = F
+
+        self.initialise_stage(F)
+
+
 
         # initial conditions u
         u = self.u0
@@ -57,7 +57,7 @@ class StaticSolver(Solver):
             unit="steps",
         )
 
-        self.update_time_step(t_start_idx)
+        self.update_time_step_rhs(t_start_idx)
 
         # set initial incremental external force
         if F_ini is None:
@@ -71,7 +71,7 @@ class StaticSolver(Solver):
             # update progress bar
             pbar.update(1)
 
-            self.update_time_step(t)
+            self.update_time_step_rhs(t)
 
             # update external force
             d_force = d_force_ini + self.F - F_prev

@@ -64,7 +64,7 @@ class NewmarkSolver(Solver):
         """
 
         # calculates force with custom load function
-        self.update_non_linear_iteration(t,u=u)
+        self.update_non_linear_iteration_rhs(t,u=u)
 
         force = self.F
         # Convert force vector to a 1d numpy array
@@ -117,6 +117,7 @@ class NewmarkImplicitForce(NewmarkSolver):
         :return:
         """
 
+        self.initialise_stage(F)
         if F.ndim == 2:
             self.force_matrix = F
         else:
@@ -145,8 +146,8 @@ class NewmarkImplicitForce(NewmarkSolver):
         u = self.u0
         v = self.v0
 
-        self.update_time_step(t_start_idx)
-        self.update_non_linear_iteration(t_start_idx)
+        self.update_time_step_rhs(t_start_idx)
+        self.update_non_linear_iteration_rhs(t_start_idx,u=u)
 
         # initial force conditions: for computation of initial acceleration
         if issparse(self.F):
@@ -202,7 +203,7 @@ class NewmarkImplicitForce(NewmarkSolver):
 
         # iterate for each time step
         for t in range(t_start_idx + 1, t_end_idx + 1):
-            self.update_time_step(t)
+            self.update_time_step_rhs(t, u=u)
 
             # update progress bar
             pbar.update(1)

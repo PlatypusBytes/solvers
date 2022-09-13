@@ -55,7 +55,8 @@ class Solver:
         self.time = []
 
         # load function
-        self.load_func = None
+        self.update_non_linear_iteration_rhs_func = None
+        self.update_time_step_func = None
         self.stiffness_func = None
         self.mass_func = None
         self.damping_func = None
@@ -135,24 +136,41 @@ class Solver:
         self.u0 = self.u[output_time_idx, :]
         self.v0 = self.v[output_time_idx, :]
 
+    def initialise_stage(self, F):
 
-    def update_time_step(self,t, **kwargs):
+        if F.ndim == 2:
+            self.force_matrix = F
+        else:
+            self.F = F
 
-        if self.load_func is None:
-
+        if self.update_time_step_func is None:
             # define load function, if none is given
-            def load_func(t,**kwargs):
+            def load_func(t, **kwargs):
                 if self.force_matrix is not None:
-                    return self.force_matrix[:,t]
+                    return self.force_matrix[:, t]
                 else:
                     return self.F
-            self.load_func = load_func
 
-        self.update_non_linear_iteration(t, **kwargs)
+            self.update_time_step_func = load_func
 
-    def update_non_linear_iteration(self, t, **kwargs):
+    def update_time_step_rhs(self,t, **kwargs):
 
-        self.F = self.load_func(t)
+
+        self.F = self.update_time_step_func(t, **kwargs)
+        # if self.update_time_step_func is None:
+        #     # define load function, if none is given
+        #     def load_func(t,**kwargs):
+        #         if self.force_matrix is not None:
+        #             return self.force_matrix[:,t]
+        #         else:
+        #             return self.F
+        #     self.update_time_step_func = load_func
+        self.update_non_linear_iteration_rhs(t, **kwargs)
+
+    def update_non_linear_iteration_rhs(self, t, **kwargs):
+
+        if self.update_non_linear_iteration_rhs_func is not None:
+            self.F = self.update_non_linear_iteration_rhs_func(t)
 
         if issparse(self.F):
             self.F = self.F.toarray()[:, 0]
@@ -207,11 +225,11 @@ class Solver:
         :param t_end_idx:   last time index of current stage
         :return:
         """
-
-        # validate shape external force vector
-        if len(self.time) != np.shape(F)[1]:
-            logging.error("Solver error: Solver time is not equal to force vector time")
-            raise TimeException("Solver time is not equal to force vector time")
+        #
+        # # validate shape external force vector
+        # if len(self.time) != np.shape(F)[1]:
+        #     logging.error("Solver error: Solver time is not equal to force vector time")
+        #     raise TimeException("Solver time is not equal to force vector time")
 
         # validate time step size
         diff = np.diff(self.time[t_start_idx:t_end_idx])
