@@ -35,8 +35,6 @@ class StaticSolver(Solver):
 
         self.initialise_stage(F)
 
-
-
         # initial conditions u
         u = self.u0
 
@@ -58,6 +56,7 @@ class StaticSolver(Solver):
         )
 
         self.update_time_step_rhs(t_start_idx)
+        self.update_non_linear_iteration_rhs(t_start_idx)
 
         # set initial incremental external force
         if F_ini is None:
@@ -72,6 +71,7 @@ class StaticSolver(Solver):
             pbar.update(1)
 
             self.update_time_step_rhs(t)
+            self.update_non_linear_iteration_rhs(t)
 
             # update external force
             d_force = d_force_ini + self.F - F_prev

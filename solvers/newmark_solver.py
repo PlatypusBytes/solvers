@@ -333,6 +333,7 @@ class NewmarkExplicit(NewmarkSolver):
 
         # initial force conditions: for computation of initial acceleration
         self.update_time_step_rhs(t_start_idx)
+        self.update_non_linear_iteration_rhs(t_start_idx, u=self.u0)
 
         if issparse(self.F):
             d_force = self.F.toarray()[:, 0]

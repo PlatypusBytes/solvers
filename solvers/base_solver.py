@@ -165,7 +165,7 @@ class Solver:
         #         else:
         #             return self.F
         #     self.update_time_step_func = load_func
-        self.update_non_linear_iteration_rhs(t, **kwargs)
+       # self.update_non_linear_iteration_rhs(t, **kwargs)
 
     def update_non_linear_iteration_rhs(self, t, **kwargs):
 
