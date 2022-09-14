@@ -170,7 +170,7 @@ class Solver:
     def update_non_linear_iteration_rhs(self, t, **kwargs):
 
         if self.update_non_linear_iteration_rhs_func is not None:
-            self.F = self.update_non_linear_iteration_rhs_func(t)
+            self.F = self.update_non_linear_iteration_rhs_func(t, **kwargs)
 
         if issparse(self.F):
             self.F = self.F.toarray()[:, 0]
