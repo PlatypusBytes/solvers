@@ -313,6 +313,7 @@ class NewmarkExplicit(NewmarkSolver):
         :param t_end_idx: time index of end time for the stage analysis
         :return:
         """
+        self.initialise_stage(F)
 
         # check if sparse calculation should be performed
         M, C, K = self.check_for_sparse(M, C, K)
@@ -331,10 +332,12 @@ class NewmarkExplicit(NewmarkSolver):
         gamma = self.gamma
 
         # initial force conditions: for computation of initial acceleration
-        if issparse(F):
-            d_force = F[:, t_start_idx].toarray()[:, 0]
+        self.update_time_step_rhs(t_start_idx)
+
+        if issparse(self.F):
+            d_force = self.F.toarray()[:, 0]
         else:
-            d_force = F[:, t_start_idx]
+            d_force = self.F
 
         # initial conditions u, v, a
         u = self.u0
@@ -371,10 +374,7 @@ class NewmarkExplicit(NewmarkSolver):
         )
 
         # initialise Force from load function
-        if self.load_func is not None and issparse(F):
-            F_previous = F[:, t_start_idx].toarray()[:, 0]
-        else:
-            F_previous = F[:, t_start_idx]
+        F_previous = np.copy(self.F)
 
         # initialise absorbing boundary if not initialised
         if self.absorbing_boundary is None:
@@ -396,13 +396,7 @@ class NewmarkExplicit(NewmarkSolver):
             c_part = C.dot(c_part)
 
             # update external force
-            if self.load_func is not None:
-                d_force, F_previous = self.update_force(u, F_previous, t)
-            else:
-                d_force = F[:, t] - F_previous
-                if issparse(d_force):
-                    d_force = d_force.toarray()[:, 0]
-                F_previous = F[:, t]
+            d_force, F_previous = self.update_force(u, F_previous, t)
 
             # external force
             force_ext = d_force + m_part + c_part - self.absorbing_boundary.dot(dv)
