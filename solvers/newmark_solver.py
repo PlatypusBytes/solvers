@@ -386,6 +386,9 @@ class NewmarkExplicit(NewmarkSolver):
 
         # iterate for each time step
         for t in range(t_start_idx + 1, t_end_idx + 1):
+
+            self.update_time_step_rhs(t, u=u)
+
             # update progress bar
             pbar.update(1)
 
