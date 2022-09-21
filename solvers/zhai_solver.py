@@ -63,16 +63,14 @@ class ZhaiSolver(Solver):
         :param t: current time step
         :return:
         """
-        if self.load_func is not None:
-            force = self.load_func(u, t)
-            if issparse(force):
-                force = force.toarray()[:, 0]
-        else:
-            if issparse(F):
-                force = F[:, t]
-                force = force.toarray()[:, 0]
-            else:
-                force = F[:, t]
+
+        # calculates force with custom load function
+        self.update_non_linear_iteration_rhs(t, u=u)
+
+        force = self.F
+        # Convert force vector to a 1d numpy array
+        if issparse(force):
+            force = force.toarray()[:, 0]
 
         return force
 
@@ -146,6 +144,8 @@ class ZhaiSolver(Solver):
         :return:
         """
 
+        self.initialise_stage(F)
+
         # check if sparse calculation should be performed
         M, C, K = self.check_for_sparse(M, C, K)
 
@@ -156,10 +156,13 @@ class ZhaiSolver(Solver):
             (t_end_idx - t_start_idx))
 
         # initial force conditions: for computation of initial acceleration
-        if issparse(F):
-            force = F[:, t_start_idx].toarray()[:, 0]
+        self.update_time_step_rhs(t_start_idx)
+        self.update_non_linear_iteration_rhs(t_start_idx, u=self.u0)
+
+        if issparse(self.F):
+            force = self.F.toarray()[:, 0]
         else:
-            force = F[:, t_start_idx]
+            force = self.F
 
         # get initial displacement, velocity, acceleration and inverse mass matrix
         u = self.u0
@@ -185,6 +188,8 @@ class ZhaiSolver(Solver):
 
         is_initial = True
         for t in range(t_start_idx + 1, t_end_idx + 1):
+            self.update_time_step_rhs(t, u=u)
+
             # update progress bar
             pbar.update(1)
 
