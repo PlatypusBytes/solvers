@@ -96,6 +96,15 @@ class TestNewmark(unittest.TestCase):
         # set_matrices_as_sparse()
         self.run_newmark_explicit_test()
 
+    def test_sparse_solver_newmark_constant_force_vector(self):
+        self.M, self.K, self.C, self.F = set_matrices_as_sparse(self.M, self.K, self.C, self.F)
+
+        # create force vector
+        self.F = self.F[:,0].toarray()[:,0]
+
+        # run test
+        self.run_newmark_explicit_test()
+
     def test_np_array_solver_newmark(self):
         self.M, self.K, self.C, self.F = set_matrices_as_np_array(self.M, self.K, self.C, self.F)
         self.run_newmark_explicit_test()
