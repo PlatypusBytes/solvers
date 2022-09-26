@@ -118,17 +118,13 @@ class NewmarkImplicitForce(NewmarkSolver):
         """
 
         self.initialise_stage(F)
-        if F.ndim == 2:
-            self.force_matrix = F
-        else:
-            self.F = F
 
         # check if sparse calculation should be performed
         M, C, K = self.check_for_sparse(M, C, K)
 
         self.update_output_arrays(t_start_idx, t_end_idx)
         # validate solver index
-        self.validate_input(F, t_start_idx, t_end_idx)
+        self.validate_input(t_start_idx, t_end_idx)
 
         # calculate time step size
         # todo correct t_step, as it is not correct, but tests succeed
@@ -138,9 +134,6 @@ class NewmarkImplicitForce(NewmarkSolver):
         # constants for the Newmark integration
         beta = self.beta
         gamma = self.gamma
-
-
-
 
         # initial conditions u, v, a
         u = self.u0
@@ -189,10 +182,6 @@ class NewmarkImplicitForce(NewmarkSolver):
 
         # initialise Force from load function
         F_previous = np.copy(self.F)
-        # if self.load_func is not None and issparse(F):
-        #     F_previous = F[:, t_start_idx].toarray()[:, 0]
-        # else:
-        #     F_previous = F[:, t_start_idx]
 
         # initialise absorbing boundary if not initialised
         if self.absorbing_boundary is None:
@@ -228,16 +217,7 @@ class NewmarkImplicitForce(NewmarkSolver):
             while not converged and i < self.max_iter:
 
                 # update external force
-
                 d_force, F_previous_i = self.update_force(u, F_previous, t)
-
-                # if self.load_func is not None:
-                #     d_force, F_previous_i = self.update_force(u, F_previous, t)
-                # else:
-                #     d_force = F[:, t] - F_previous
-                #     if issparse(d_force):
-                #         d_force = d_force.toarray()[:, 0]
-                #     F_previous_i = F[:, t]
 
                 # external force
                 force_ext = d_force + m_part + c_part - self.absorbing_boundary.dot(dv)
@@ -320,7 +300,7 @@ class NewmarkExplicit(NewmarkSolver):
 
         self.update_output_arrays(t_start_idx, t_end_idx)
         # validate solver index
-        self.validate_input(F, t_start_idx, t_end_idx)
+        self.validate_input(t_start_idx, t_end_idx)
 
         # calculate time step size
         # todo correct t_step, as it is not correct, but tests succeed

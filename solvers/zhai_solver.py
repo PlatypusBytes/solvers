@@ -53,7 +53,7 @@ class ZhaiSolver(Solver):
         a0 = self.evaluate_acceleration(inv_M, C, K, F, u0, v0)
         return inv_M, a0
 
-    def calculate_force(self, u, F, t):
+    def calculate_force(self, u, t):
         """
         Calculate external force if a load function is given. If no load function is given, force is taken from current
         load vector
@@ -150,7 +150,7 @@ class ZhaiSolver(Solver):
         M, C, K = self.check_for_sparse(M, C, K)
 
         # validate input
-        self.validate_input(F, t_start_idx, t_end_idx)
+        self.validate_input(t_start_idx, t_end_idx)
 
         t_step = (self.time[t_end_idx] - self.time[t_start_idx]) / (
             (t_end_idx - t_start_idx))
@@ -201,7 +201,7 @@ class ZhaiSolver(Solver):
             u_new, v_new = self.prediction(u, v, a, a_old, t_step, is_initial)
 
             # Calculate predicted external force vector
-            force = self.calculate_force(u_new, F, t)
+            force = self.calculate_force(u_new, t)
 
             # Calculate predicted acceleration
             a_new = self.evaluate_acceleration(inv_M, C, K, force, u_new, v_new)
@@ -210,7 +210,7 @@ class ZhaiSolver(Solver):
             u_new, v_new = self.newmark_iteration(u, v, a, a_new, t_step)
 
             # Calculate corrected force vector
-            force = self.calculate_force(u_new, F, t)
+            force = self.calculate_force(u_new, t)
 
             # Calculate corrected acceleration
             a_new = self.evaluate_acceleration(inv_M, C, K, force, u_new, v_new)

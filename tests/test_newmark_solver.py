@@ -231,9 +231,10 @@ class TestNewmark(unittest.TestCase):
         :return:
         """
 
-        def load_function(u,t):
+        def load_function(t,u=None):
             # half load each time step
-            self.F[:, t] = self.F[:,t-1] * 0.5
+            if t>0:
+                self.F[:, t] = self.F[:,t-1] * 0.5
             return self.F[:, t].toarray()[:,0]
 
         # manually make force matrix
@@ -244,7 +245,7 @@ class TestNewmark(unittest.TestCase):
 
         # calculate using custom load function
         res_func = NewmarkExplicit()
-        res_func.load_func = load_function
+        res_func.update_time_step_func = load_function
         res_func.beta = self.settings["beta"]
         res_func.gamma = self.settings["gamma"]
         res_func.initialise(self.number_eq, self.time)

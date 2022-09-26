@@ -138,14 +138,21 @@ class Solver:
 
     def initialise_stage(self, F):
 
+        # if F is a matrix, initialise force_matrix
         if F.ndim == 2:
             self.force_matrix = F
         else:
             self.F = F
 
+        # define load function, if none is given
         if self.update_time_step_func is None:
-            # define load function, if none is given
             def load_func(t, **kwargs):
+                """
+                Gets Force at time t from Force matrix
+                :param t: time index
+                :param kwargs:
+                :return:
+                """
                 if self.force_matrix is not None:
                     return self.force_matrix[:, t]
                 else:
@@ -155,17 +162,7 @@ class Solver:
 
     def update_time_step_rhs(self,t, **kwargs):
 
-
         self.F = self.update_time_step_func(t, **kwargs)
-        # if self.update_time_step_func is None:
-        #     # define load function, if none is given
-        #     def load_func(t,**kwargs):
-        #         if self.force_matrix is not None:
-        #             return self.force_matrix[:,t]
-        #         else:
-        #             return self.F
-        #     self.update_time_step_func = load_func
-       # self.update_non_linear_iteration_rhs(t, **kwargs)
 
     def update_non_linear_iteration_rhs(self, t, **kwargs):
 
@@ -174,8 +171,6 @@ class Solver:
 
         if issparse(self.F):
             self.F = self.F.toarray()[:, 0]
-
-
 
     def update_output_arrays(self,t_start_idx, t_end_idx):
         """
@@ -215,21 +210,21 @@ class Solver:
         """
         self.time_out = self.time[self.output_time_indices]
 
-    def validate_input(self, F, t_start_idx, t_end_idx):
+    def validate_input(self, t_start_idx, t_end_idx):
         """
         Validates solver input at current stage. It is checked if the external force vector shape corresponds with the
         time discretisation. Furthermore, it is checked if all time steps in the current stage are equal.
 
-        :param F:           External force vector.
         :param t_start_idx: first time index of current stage
         :param t_end_idx:   last time index of current stage
         :return:
         """
         #
-        # # validate shape external force vector
-        # if len(self.time) != np.shape(F)[1]:
-        #     logging.error("Solver error: Solver time is not equal to force vector time")
-        #     raise TimeException("Solver time is not equal to force vector time")
+        # validate shape external force vector
+        if self.force_matrix is not None:
+            if len(self.time) != np.shape(self.force_matrix)[1]:
+                logging.error("Solver error: Solver time is not equal to force vector time")
+                raise TimeException("Solver time is not equal to force vector time")
 
         # validate time step size
         diff = np.diff(self.time[t_start_idx:t_end_idx])
@@ -237,10 +232,3 @@ class Solver:
             if not np.all(np.isclose(diff, diff[0])):
                 logging.error("Solver error: Time steps differ in current stage")
                 raise TimeException("Time steps differ in current stage")
-
-if __name__ == '__main__':
-    solver = Solver()
-
-    solver.force_matrix = np.ones((2,3))
-
-    solver.update_time_step(1)

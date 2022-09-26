@@ -45,7 +45,7 @@ class StaticSolver(Solver):
         self.u[output_time_idx, :] = u
 
         # validate input
-        self.validate_input(F, t_start_idx, t_end_idx)
+        self.validate_input(t_start_idx, t_end_idx)
 
         # define progress bar
         pbar = tqdm(
