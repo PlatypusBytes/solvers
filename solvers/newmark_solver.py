@@ -148,8 +148,6 @@ class NewmarkImplicitForce(NewmarkSolver):
         else:
             d_force = self.F
 
-        d_force_prev = np.copy(d_force)
-
         a = self.calculate_initial_acceleration(M, C, K, d_force, u, v)
 
         # initialise delta velocity
@@ -246,7 +244,7 @@ class NewmarkImplicitForce(NewmarkSolver):
                         + a * (t_step * (1 - gamma / (2 * beta)))
                 )
 
-                u += du
+                u = u + du
 
                 if not converged:
                     force_previous = np.copy(force_ext)

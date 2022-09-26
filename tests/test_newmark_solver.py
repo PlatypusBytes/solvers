@@ -57,8 +57,8 @@ class TestNewmark(unittest.TestCase):
         np.testing.assert_array_equal(acc, np.array([0, 10]))
         return
 
-    def run_newmark_explicit_test(self):
-        res = NewmarkExplicit()
+    def run_newmark_test(self,solver):
+        res = solver()
 
         res.beta = self.settings["beta"]
         res.gamma = self.settings["gamma"]
@@ -91,30 +91,48 @@ class TestNewmark(unittest.TestCase):
             ),
         )
 
-    def test_sparse_solver_newmark(self):
+    def test_sparse_solver_newmark_explicit(self):
         self.M, self.K, self.C, self.F = set_matrices_as_sparse(self.M, self.K, self.C, self.F)
         # set_matrices_as_sparse()
-        self.run_newmark_explicit_test()
+        self.run_newmark_test(NewmarkExplicit)
 
-    def test_sparse_solver_newmark_constant_force_vector(self):
+    def test_sparse_solver_newmark_implicit(self):
+        self.M, self.K, self.C, self.F = set_matrices_as_sparse(self.M, self.K, self.C, self.F)
+        # set_matrices_as_sparse()
+        self.run_newmark_test(NewmarkImplicitForce)
+
+    def test_sparse_solver_newmark_explicit_constant_force_vector(self):
         self.M, self.K, self.C, self.F = set_matrices_as_sparse(self.M, self.K, self.C, self.F)
 
         # create force vector
         self.F = self.F[:,0].toarray()[:,0]
 
         # run test
-        self.run_newmark_explicit_test()
+        self.run_newmark_test(NewmarkExplicit)
 
-    def test_np_array_solver_newmark(self):
+    def test_sparse_solver_newmark_implicit_constant_force_vector(self):
+        self.M, self.K, self.C, self.F = set_matrices_as_sparse(self.M, self.K, self.C, self.F)
+
+        # create force vector
+        self.F = self.F[:,0].toarray()[:,0]
+
+        # run test
+        self.run_newmark_test(NewmarkImplicitForce)
+
+    def test_np_array_solver_newmark_explicit(self):
         self.M, self.K, self.C, self.F = set_matrices_as_np_array(self.M, self.K, self.C, self.F)
-        self.run_newmark_explicit_test()
+        self.run_newmark_test(NewmarkExplicit)
 
-    def run_test_solver_newmark_two_stages_explicit(self):
+    def test_np_array_solver_newmark_implicit(self):
+        self.M, self.K, self.C, self.F = set_matrices_as_np_array(self.M, self.K, self.C, self.F)
+        self.run_newmark_test(NewmarkImplicitForce)
+
+    def run_test_solver_newmark_two_stages(self, solver):
         """
                Test newmark solver with 2 stages, where the different stages have different time steps
                :return:
                """
-        res = NewmarkExplicit()
+        res = solver()
 
         res.beta = self.settings["beta"]
         res.gamma = self.settings["gamma"]
@@ -181,13 +199,21 @@ class TestNewmark(unittest.TestCase):
             ),
         )
 
-    def test_np_array_solver_newmark_two_stages(self):
+    def test_np_array_solver_newmark_explicit_two_stages(self):
         self.M, self.K, self.C, self.F = set_matrices_as_np_array(self.M, self.K, self.C, self.F)
-        self.run_test_solver_newmark_two_stages_explicit()
+        self.run_test_solver_newmark_two_stages(NewmarkExplicit)
 
-    def test_sparse_solver_newmark_two_stages(self):
+    def test_np_array_solver_newmark_implicit_two_stages(self):
+        self.M, self.K, self.C, self.F = set_matrices_as_np_array(self.M, self.K, self.C, self.F)
+        self.run_test_solver_newmark_two_stages(NewmarkImplicitForce)
+
+    def test_sparse_solver_newmark_explicit_two_stages(self):
         self.M, self.K, self.C, self.F = set_matrices_as_sparse(self.M, self.K, self.C, self.F)
-        self.run_test_solver_newmark_two_stages_explicit()
+        self.run_test_solver_newmark_two_stages(NewmarkExplicit)
+
+    def test_sparse_solver_newmark_implicit_two_stages(self):
+        self.M, self.K, self.C, self.F = set_matrices_as_sparse(self.M, self.K, self.C, self.F)
+        self.run_test_solver_newmark_two_stages(NewmarkImplicitForce)
 
     def test_solver_newmark_static_explicit(self):
         # with damping solution converges to the static one
