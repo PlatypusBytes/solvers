@@ -1,14 +1,11 @@
 from solvers.base_solver import Solver
 
-import os
-import pickle
-
 import numpy as np
-from scipy.sparse.linalg import spsolve, inv
-from scipy.sparse import issparse, csc_matrix
+from numpy.linalg import solve
+from scipy.sparse.linalg import spsolve
+from scipy.sparse import issparse
 
 from tqdm import tqdm
-import logging
 
 
 class StaticSolver(Solver):
@@ -61,9 +58,8 @@ class StaticSolver(Solver):
         # set initial incremental external force
         if F_ini is None:
             F_ini = np.zeros_like(self.F)
-        # if issparse(F[:, 0]):
-        #     F_ini = csc_matrix(F_ini).T
-        d_force_ini= self.F - F_ini
+
+        d_force_ini = self.F - F_ini
         F_prev = np.copy(self.F)
 
         for t in range(t_start_idx + 1, t_end_idx + 1):
@@ -77,7 +73,10 @@ class StaticSolver(Solver):
             d_force = d_force_ini + self.F - F_prev
 
             # solve
-            uu = spsolve(K, d_force)
+            if issparse(K):
+                uu = spsolve(K, d_force)
+            else:
+                uu = solve(K,d_force)
 
             # update displacement
             u = u + uu

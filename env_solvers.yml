@@ -13,7 +13,6 @@ dependencies:
   - sphinx=3.2.1
   - sphinxcontrib-bibtex=1.0.0
   - sphinx-autodoc-typehints=1.11.1
-  - pypardiso=0.4.0
   - pip:
     - sphinx-rtd-theme==0.5.1
     - rst2pdf==0.98

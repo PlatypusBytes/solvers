@@ -2,13 +2,8 @@ from solvers.base_solver import Solver
 
 import numpy as np
 from numpy.linalg import solve, inv
-from pypardiso import spsolve as pypardiso_solver
-from scipy.sparse.linalg import spsolve as scipy_solver
-from scipy.sparse.linalg import inv as sp_inv
 from scipy.sparse.linalg import splu
 from scipy.sparse import issparse, csc_matrix
-import os
-import pickle
 from tqdm import tqdm
 import logging
 
@@ -275,6 +270,7 @@ class NewmarkImplicitForce(NewmarkSolver):
         self.f[:, :] = np.transpose(K.dot(np.transpose(self.u)))
         # close the progress bar
         pbar.close()
+
 
 class NewmarkExplicit(NewmarkSolver):
 
