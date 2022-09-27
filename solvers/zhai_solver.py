@@ -171,6 +171,8 @@ class ZhaiSolver(Solver):
         self.v[output_time_idx, :] = v
         self.a[output_time_idx, :] = a
 
+        self.F_out[output_time_idx, :] = np.copy(self.F)
+
         a_old = np.zeros(self.number_equations)
 
         # define progress bar
@@ -215,6 +217,8 @@ class ZhaiSolver(Solver):
                 self.u[t2, :] = u_new
                 self.v[t2, :] = v_new
                 self.a[t2, :] = a_new
+
+                self.F_out[t2, :] = np.copy(self.F)
 
                 t2 += 1
 

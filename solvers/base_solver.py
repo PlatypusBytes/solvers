@@ -70,6 +70,8 @@ class Solver:
         self.v_out = []
         self.a_out = []
         self.time_out = []
+        self.F_out = []
+
 
         self.output_time = []
         self.output_time_indices = []
@@ -120,6 +122,8 @@ class Solver:
         self.v = np.zeros((len(self.output_time_indices), number_equations))
         self.a = np.zeros((len(self.output_time_indices), number_equations))
         self.f = np.zeros((len(self.output_time_indices), number_equations))
+
+        self.F_out = np.zeros((len(self.output_time_indices), number_equations))
 
         self.number_equations = number_equations
 

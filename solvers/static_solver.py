@@ -41,6 +41,8 @@ class StaticSolver(Solver):
         # add to results initial conditions
         self.u[output_time_idx, :] = u
 
+        self.F_out[output_time_idx, :] = np.copy(self.F)
+
         # validate input
         self.validate_input(t_start_idx, t_end_idx)
 
@@ -84,6 +86,8 @@ class StaticSolver(Solver):
             # add to results
             if t == self.output_time_indices[t2]:
                 self.u[t2, :] = u
+
+                self.F_out[t2, :] = np.copy(self.F)
                 t2 += 1
 
             d_force_ini = 0

@@ -156,6 +156,7 @@ class NewmarkImplicitForce(NewmarkSolver):
         self.v[output_time_idx, :] = v
         self.a[output_time_idx, :] = a
         self.f[output_time_idx, :] = d_force
+        self.F_out[output_time_idx, :] = np.copy(self.F)
 
         # combined stiffness matrix
         K_till = K + C * (gamma / (beta * t_step)) + M * (1 / (beta * t_step ** 2))
@@ -264,6 +265,8 @@ class NewmarkImplicitForce(NewmarkSolver):
                 self.u[t2, :] = u
                 self.v[t2, :] = v
                 self.a[t2, :] = a
+
+                self.F_out[t2,:] = np.copy(self.F)
                 t2 += 1
 
         # calculate nodal force
@@ -330,6 +333,8 @@ class NewmarkExplicit(NewmarkSolver):
         self.v[output_time_idx, :] = v
         self.a[output_time_idx, :] = a
         self.f[output_time_idx, :] = d_force
+
+        self.F_out[output_time_idx, :] = np.copy(self.F)
 
         # combined stiffness matrix
         K_till = K + C * (gamma / (beta * t_step)) + M * (1 / (beta * t_step ** 2))
@@ -409,6 +414,8 @@ class NewmarkExplicit(NewmarkSolver):
                 self.u[t2, :] = u
                 self.v[t2, :] = v
                 self.a[t2, :] = a
+
+                self.F_out[t2, :] = np.copy(self.F)
                 t2 += 1
 
         # calculate nodal force
