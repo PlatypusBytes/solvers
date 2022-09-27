@@ -55,8 +55,8 @@ class Solver:
         self.time = []
 
         # load function
-        self.update_non_linear_iteration_rhs_func = None
-        self.update_time_step_func = None
+        self.update_rhs_at_non_linear_iteration_func = None
+        self.update_rhs_at_time_step_func = None
         self.stiffness_func = None
         self.mass_func = None
         self.damping_func = None
@@ -145,7 +145,7 @@ class Solver:
             self.F = F
 
         # define load function, if none is given
-        if self.update_time_step_func is None:
+        if self.update_rhs_at_time_step_func is None:
             def load_func(t, **kwargs):
                 """
                 Gets Force at time t from Force matrix
@@ -158,16 +158,16 @@ class Solver:
                 else:
                     return self.F
 
-            self.update_time_step_func = load_func
+            self.update_rhs_at_time_step_func = load_func
 
-    def update_time_step_rhs(self,t, **kwargs):
+    def update_rhs_at_time_step(self,t, **kwargs):
 
-        self.F = self.update_time_step_func(t, **kwargs)
+        self.F = self.update_rhs_at_time_step_func(t, **kwargs)
 
-    def update_non_linear_iteration_rhs(self, t, **kwargs):
+    def update_rhs_at_non_linear_iteration(self, t, **kwargs):
 
-        if self.update_non_linear_iteration_rhs_func is not None:
-            self.F = self.update_non_linear_iteration_rhs_func(t, **kwargs)
+        if self.update_rhs_at_non_linear_iteration_func is not None:
+            self.F = self.update_rhs_at_non_linear_iteration_func(t, **kwargs)
 
         if issparse(self.F):
             self.F = self.F.toarray()[:, 0]

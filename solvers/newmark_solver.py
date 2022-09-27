@@ -59,7 +59,7 @@ class NewmarkSolver(Solver):
         """
 
         # calculates force with custom load function
-        self.update_non_linear_iteration_rhs(t,u=u)
+        self.update_rhs_at_non_linear_iteration(t,u=u)
 
         force = self.F
         # Convert force vector to a 1d numpy array
@@ -134,8 +134,8 @@ class NewmarkImplicitForce(NewmarkSolver):
         u = self.u0
         v = self.v0
 
-        self.update_time_step_rhs(t_start_idx)
-        self.update_non_linear_iteration_rhs(t_start_idx,u=u)
+        self.update_rhs_at_time_step(t_start_idx)
+        self.update_rhs_at_non_linear_iteration(t_start_idx,u=u)
 
         # initial force conditions: for computation of initial acceleration
         if issparse(self.F):
@@ -185,7 +185,7 @@ class NewmarkImplicitForce(NewmarkSolver):
 
         # iterate for each time step
         for t in range(t_start_idx + 1, t_end_idx + 1):
-            self.update_time_step_rhs(t, u=u)
+            self.update_rhs_at_time_step(t, u=u)
 
             # update progress bar
             pbar.update(1)
@@ -306,8 +306,8 @@ class NewmarkExplicit(NewmarkSolver):
         gamma = self.gamma
 
         # initial force conditions: for computation of initial acceleration
-        self.update_time_step_rhs(t_start_idx)
-        self.update_non_linear_iteration_rhs(t_start_idx, u=self.u0)
+        self.update_rhs_at_time_step(t_start_idx)
+        self.update_rhs_at_non_linear_iteration(t_start_idx, u=self.u0)
 
         if issparse(self.F):
             d_force = self.F.toarray()[:, 0]
@@ -361,7 +361,7 @@ class NewmarkExplicit(NewmarkSolver):
         # iterate for each time step
         for t in range(t_start_idx + 1, t_end_idx + 1):
 
-            self.update_time_step_rhs(t, u=u)
+            self.update_rhs_at_time_step(t, u=u)
 
             # update progress bar
             pbar.update(1)

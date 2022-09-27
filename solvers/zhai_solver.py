@@ -60,7 +60,7 @@ class ZhaiSolver(Solver):
         """
 
         # calculates force with custom load function
-        self.update_non_linear_iteration_rhs(t, u=u)
+        self.update_rhs_at_non_linear_iteration(t, u=u)
 
         force = self.F
         # Convert force vector to a 1d numpy array
@@ -151,8 +151,8 @@ class ZhaiSolver(Solver):
             (t_end_idx - t_start_idx))
 
         # initial force conditions: for computation of initial acceleration
-        self.update_time_step_rhs(t_start_idx)
-        self.update_non_linear_iteration_rhs(t_start_idx, u=self.u0)
+        self.update_rhs_at_time_step(t_start_idx)
+        self.update_rhs_at_non_linear_iteration(t_start_idx, u=self.u0)
 
         if issparse(self.F):
             force = self.F.toarray()[:, 0]
@@ -183,7 +183,7 @@ class ZhaiSolver(Solver):
 
         is_initial = True
         for t in range(t_start_idx + 1, t_end_idx + 1):
-            self.update_time_step_rhs(t, u=u)
+            self.update_rhs_at_time_step(t, u=u)
 
             # update progress bar
             pbar.update(1)

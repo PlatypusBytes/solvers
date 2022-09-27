@@ -52,8 +52,8 @@ class StaticSolver(Solver):
             unit="steps",
         )
 
-        self.update_time_step_rhs(t_start_idx)
-        self.update_non_linear_iteration_rhs(t_start_idx)
+        self.update_rhs_at_time_step(t_start_idx)
+        self.update_rhs_at_non_linear_iteration(t_start_idx)
 
         # set initial incremental external force
         if F_ini is None:
@@ -66,8 +66,8 @@ class StaticSolver(Solver):
             # update progress bar
             pbar.update(1)
 
-            self.update_time_step_rhs(t)
-            self.update_non_linear_iteration_rhs(t)
+            self.update_rhs_at_time_step(t)
+            self.update_rhs_at_non_linear_iteration(t)
 
             # update external force
             d_force = d_force_ini + self.F - F_prev

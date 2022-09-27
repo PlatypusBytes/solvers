@@ -280,7 +280,7 @@ class TestNewmark(unittest.TestCase):
 
         # calculate using custom load function
         res_func = NewmarkExplicit()
-        res_func.update_time_step_func = load_function
+        res_func.update_rhs_at_time_step_func = load_function
         res_func.beta = self.settings["beta"]
         res_func.gamma = self.settings["gamma"]
         res_func.initialise(self.number_eq, self.time)
