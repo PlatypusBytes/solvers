@@ -207,6 +207,8 @@ class Solver:
             self.a = np.insert(self.a, closest_greater_index, np.zeros(self.a.shape[1]), axis=0)
             self.f = np.insert(self.f, closest_greater_index, np.zeros(self.f.shape[1]), axis=0)
 
+            self.F_out = np.insert(self.F_out, closest_greater_index, np.zeros(self.F_out.shape[1]), axis=0)
+
             self.output_time = np.insert(self.output_time, closest_greater_index, self.time[t_end_idx])
 
     def finalise(self):
