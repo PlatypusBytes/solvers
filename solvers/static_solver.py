@@ -38,6 +38,9 @@ class StaticSolver(Solver):
         output_time_idx = np.where(self.output_time_indices == t_start_idx)[0][0]
         t2 = output_time_idx + 1
 
+        self.update_rhs_at_time_step(t_start_idx)
+        self.update_rhs_at_non_linear_iteration(t_start_idx,u=u)
+
         # add to results initial conditions
         self.u[output_time_idx, :] = u
 
