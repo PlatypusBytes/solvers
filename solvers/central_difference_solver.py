@@ -74,6 +74,7 @@ class CentralDifferenceSolver(Solver):
         else:
             inv_M = inv(M)
 
+        self.update_output_arrays(t_start_idx, t_end_idx)
         # validate input
         self.validate_input( t_start_idx, t_end_idx)
 
