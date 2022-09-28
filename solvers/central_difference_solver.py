@@ -1,18 +1,12 @@
 from solvers.base_solver import Solver
 
-import os
-import pickle
-
 import numpy as np
 from numpy.linalg import solve, inv
 from scipy.sparse.linalg import spsolve, splu
-# from scipy.sparse.linalg import splu
 from scipy.sparse.linalg import inv as sp_inv
-from scipy.sparse import issparse, csc_matrix, identity, diags
+from scipy.sparse import issparse, csc_matrix, diags
 
 from tqdm import tqdm
-import logging
-
 
 class CentralDifferenceSolver(Solver):
     """

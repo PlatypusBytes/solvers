@@ -266,7 +266,7 @@ class NewmarkImplicitForce(NewmarkSolver):
                 self.v[t2, :] = v
                 self.a[t2, :] = a
 
-                self.F_out[t2,:] = np.copy(self.F)
+                self.F_out[t2, :] = np.copy(self.F)
                 t2 += 1
 
         # calculate nodal force
