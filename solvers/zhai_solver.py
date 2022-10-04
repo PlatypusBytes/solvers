@@ -3,7 +3,6 @@ from solvers.base_solver import Solver
 import numpy as np
 from numpy.linalg import inv
 from scipy.sparse.linalg import inv as sp_inv
-from scipy.sparse import issparse
 
 from tqdm import tqdm
 
@@ -63,9 +62,6 @@ class ZhaiSolver(Solver):
         self.update_rhs_at_non_linear_iteration(t, u=u)
 
         force = self.F
-        # Convert force vector to a 1d numpy array
-        if issparse(force):
-            force = force.toarray()[:, 0]
 
         return force
 
@@ -154,10 +150,7 @@ class ZhaiSolver(Solver):
         self.update_rhs_at_time_step(t_start_idx)
         self.update_rhs_at_non_linear_iteration(t_start_idx, u=self.u0)
 
-        if issparse(self.F):
-            force = self.F.toarray()[:, 0]
-        else:
-            force = self.F
+        force = self.F
 
         # get initial displacement, velocity, acceleration and inverse mass matrix
         u = self.u0
