@@ -64,8 +64,6 @@ class Solver:
         self.F = None
         self.force_matrix = None
 
-        self.absorbing_boundary = None
-
         self.output_interval = 1
         self.F_out = []
         self.output_time = []

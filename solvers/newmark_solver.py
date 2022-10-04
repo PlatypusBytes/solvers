@@ -177,13 +177,6 @@ class NewmarkImplicitForce(NewmarkSolver):
         # initialise Force from load function
         F_previous = np.copy(self.F)
 
-        # initialise absorbing boundary if not initialised
-        if self.absorbing_boundary is None:
-            if self._is_sparse_calculation:
-                self.absorbing_boundary = csc_matrix(K.shape)
-            else:
-                self.absorbing_boundary = np.zeros(K.shape)
-
         # iterate for each time step
         for t in range(t_start_idx + 1, t_end_idx + 1):
             self.update_rhs_at_time_step(t, u=u)
@@ -199,7 +192,7 @@ class NewmarkImplicitForce(NewmarkSolver):
             c_part = C.dot(c_part)
 
             # set ext force from previous time iteration
-            force_ext_prev = d_force + m_part + c_part - self.absorbing_boundary.dot(dv)
+            force_ext_prev = d_force + m_part + c_part
 
             # initialise
             du_tot = 0
@@ -214,7 +207,7 @@ class NewmarkImplicitForce(NewmarkSolver):
                 d_force, F_previous_i = self.update_force(u, F_previous, t)
 
                 # external force
-                force_ext = d_force + m_part + c_part - self.absorbing_boundary.dot(dv)
+                force_ext = d_force + m_part + c_part
 
                 # solve
                 if self._is_sparse_calculation:
@@ -356,13 +349,6 @@ class NewmarkExplicit(NewmarkSolver):
         # initialise Force from load function
         F_previous = np.copy(self.F)
 
-        # initialise absorbing boundary if not initialised
-        if self.absorbing_boundary is None:
-            if self._is_sparse_calculation:
-                self.absorbing_boundary = csc_matrix(K.shape)
-            else:
-                self.absorbing_boundary = np.zeros(K.shape)
-
         # iterate for each time step
         for t in range(t_start_idx + 1, t_end_idx + 1):
 
@@ -382,7 +368,7 @@ class NewmarkExplicit(NewmarkSolver):
             d_force, F_previous = self.update_force(u, F_previous, t)
 
             # external force
-            force_ext = d_force + m_part + c_part - self.absorbing_boundary.dot(dv)
+            force_ext = d_force + m_part + c_part
 
             # solve
             if self._is_sparse_calculation:
