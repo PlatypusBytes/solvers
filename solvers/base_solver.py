@@ -1,11 +1,6 @@
 import numpy as np
 from scipy.sparse import issparse, csc_matrix
-from pypardiso import spsolve as pypardiso_solver
-from scipy.sparse.linalg import spsolve as scipy_solver
-
-import os
-import pickle
-from tqdm import tqdm
+from scipy.sparse.linalg import spsolve
 
 import logging
 
@@ -23,23 +18,28 @@ class Solver:
 
     :Attributes:
 
-        - :self.u0:                 initial displacement vector
-        - :self.v0:                 initial velocity vector
-        - :self.u:                  full displacement matrix [ndof, number of time steps]
-        - :self.v:                  full velocity matrix [ndof, number of time steps]
-        - :self.a:                  full acceleration matrix [ndof, number of time steps]
-        - :self.f:                  full force matrix [ndof, number of time steps]
-        - :self.time:               time discretisation
-        - :self.load_func:          optional custom load function to alter external force during calculation
-        - :self.stiffness_func:     optional custom stiffness function to alter stiffness matrix during calculation
-        - :self.mass_func:          optional custom mass function to alter mass matrix during calculation
-        - :self.damping_func:       optional custom damping function to alter damping matrix during calculation
-        - :self.output_interval:    number of time steps interval in which output results are stored
-        - :self.u_out:              output displacement stored at self.output_interval
-        - :self.v_out:              output velocities stored at self.output_interval
-        - :self.a_out:              output accelerations stored at self.output_interval
-        - :self.time_out:           output time discretisation stored at self.output_interval
-        - :self.number_equations:   number of equations to be solved
+        - :self.u0:                     initial displacement vector
+        - :self.v0:                     initial velocity vector
+        - :self.u:                      displacement matrix with size [ndof, number of time steps / output_interval]
+        - :self.v:                      velocity matrix with size [ndof, number of time steps / output_interval]
+        - :self.a:                      acceleration matrix with size [ndof, number of time steps / output_interval]
+        - :self.f:                      nodal force matrix with size [ndof, number of time steps / output_interval]
+        - :self.time:                   time discretisation
+        - :self.update_rhs_at_non_linear_iteration_func:
+                                        optional custom load function to alter external force per non linear iteration
+        - :self.update_rhs_at_time_step_func:
+                                        optional custom load function to alter external force per time step
+        - :self.stiffness_func:         optional custom stiffness function to alter stiffness matrix during calculation
+        - :self.mass_func:              optional custom mass function to alter mass matrix during calculation
+        - :self.damping_func:           optional custom damping function to alter damping matrix during calculation
+        - :self.force_matrix:           external force vector
+        - :self.force_matrix:           external force matrix of size [ndof, number of time steps]
+        - :self.output_interval:        number of time steps interval in which output results are stored
+        - :self.F_out:                  output external forces stored at self.output_interval
+        - :self.output_time:            output time discretisation stored at self.output_interval
+        - :self.output_time_indices:    time indices on which results are stored
+        - :self.number_equations:       number of equations to be solved
+        - :self._is_sparse_calculation: bool which indicates if calculation should be performed with sparse solver
     """
 
     def __init__(self):
@@ -54,34 +54,37 @@ class Solver:
         self.f = []
         self.time = []
 
-        # load function
+        # load functions
         self.update_rhs_at_non_linear_iteration_func = None
         self.update_rhs_at_time_step_func = None
         self.stiffness_func = None
         self.mass_func = None
         self.damping_func = None
 
+        self.F = None
         self.force_matrix = None
 
         self.absorbing_boundary = None
 
         self.output_interval = 1
-        self.u_out = []
-        self.v_out = []
-        self.a_out = []
-        self.time_out = []
         self.F_out = []
-
-
         self.output_time = []
         self.output_time_indices = []
 
         self.number_equations = None
 
         self._is_sparse_calculation = None
-        self.sparse_solver = pypardiso_solver # pypardiso_solver or scipy_solver
+        self.sparse_solver = spsolve
 
     def check_for_sparse(self, M, C, K):
+        """
+        Checks if one of the input matrices is a sparse matrix. If so, convert all input matrices to csc sparse matrices
+
+        :param M: mass matrix
+        :param C: damping matrix
+        :param K: stiffness matrix
+        :return:
+        """
         # check if sparse calculation should be performed
         if issparse(M) or issparse(C) or issparse(K):
             self._is_sparse_calculation = True
@@ -95,10 +98,10 @@ class Solver:
 
         return M, C, K
 
-
     def initialise(self, number_equations, time):
         """
-        Initialises the solver before the calculation starts
+        Initialises the solver before the calculation starts. Initialises displacement and velocity vectors; initialises
+        output time interval and output matrices
 
         :param number_equations: number of equations to be solved
         :param time: time discretisation
@@ -141,6 +144,14 @@ class Solver:
         self.v0 = self.v[output_time_idx, :]
 
     def initialise_stage(self, F):
+        """
+        Initialises a calculation stage. It is checked if the external force is in matrix form or vector form. If the
+        external force vector is in matrix form, a load function is generated which retrieves the force vector per time
+        step from the force matrix.
+
+        :param F: external force matrix or vector
+        :return:
+        """
 
         # if F is a matrix, initialise force_matrix
         if F.ndim == 2:
@@ -154,7 +165,7 @@ class Solver:
                 """
                 Gets Force at time t from Force matrix
                 :param t: time index
-                :param kwargs:
+                :param kwargs: optional key word arguments
                 :return:
                 """
                 if self.force_matrix is not None:
@@ -165,21 +176,38 @@ class Solver:
             self.update_rhs_at_time_step_func = load_func
 
     def update_rhs_at_time_step(self,t, **kwargs):
+        """
+        Updates force vector at a time step
+
+        :param t: time index
+        :param kwargs: optional key word arguments
+        :return:
+        """
 
         self.F = self.update_rhs_at_time_step_func(t, **kwargs)
 
     def update_rhs_at_non_linear_iteration(self, t, **kwargs):
+        """
+        Updates force vector at a non-linear iteration, only if a custom function is provided
 
+        :param t: time index
+        :param kwargs: optional key word arguments
+        :return:
+        """
+
+        # if a custom function is provided to update force at non linear iteration, update the force
         if self.update_rhs_at_non_linear_iteration_func is not None:
             self.F = self.update_rhs_at_non_linear_iteration_func(t, **kwargs)
 
+        # convert sparse matrix to a 1d vector
         if issparse(self.F):
             self.F = self.F.toarray()[:, 0]
 
     def update_output_arrays(self,t_start_idx, t_end_idx):
         """
-        Updates output arrays. If either the t_start_idx or t_end_idx is missing in the output indices array, these indices
-        are added.
+        Updates output arrays. If either the t_start_idx or t_end_idx is missing in the output indices array, these
+        indices are added.
+
         :param t_start_idx: start time index
         :param t_end_idx: end time index
         :return:
@@ -216,7 +244,7 @@ class Solver:
         Finalises the solver. Displacements, velocities, accelerations and time are stored at a certain interval.
         :return:
         """
-        self.time_out = self.time[self.output_time_indices]
+        pass
 
     def validate_input(self, t_start_idx, t_end_idx):
         """
