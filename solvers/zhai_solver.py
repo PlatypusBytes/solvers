@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 class ZhaiSolver(Solver):
     """
-    Zhai Solver class. This class contains the explicit solver according to [Zhai 1996]. This class bases from
+    Zhai Solver class. This class contains the explicit solver according to :cite:p: `Zhai_1996`. This class bases from
     :class:`~rose.model.solver.Solver`.
 
     :Attributes:

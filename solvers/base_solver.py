@@ -163,7 +163,7 @@ class Solver:
                 """
                 Gets Force at time t from Force matrix
                 :param t: time index
-                :param kwargs: optional key word arguments
+                :param kwargs: optional key word arguments, this is required for self.update_rhs_at_time_step_func
                 :return:
                 """
                 if self.force_matrix is not None:

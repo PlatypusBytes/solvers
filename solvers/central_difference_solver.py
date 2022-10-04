@@ -10,12 +10,12 @@ from tqdm import tqdm
 
 class CentralDifferenceSolver(Solver):
     """
-    Central Difference Solver class. This class contains the explicit solver according to [Bathe 1996]. This class bases
-    from :class:`~rose.model.solver.Solver`.
+    Central Difference Solver class. This class contains the explicit solver according to :cite:p: `Bathe_1996`.
+    This class bases from :class:`~rose.model.solver.Solver`.
 
     :Attributes:
 
-       - :self.is_lumped:      bool which is true if mass matrix should be lumped
+       - :self.is_lumped:      bool which is true if mass matrix should be lumped and damping matrix is to be neglected
     """
     def __init__(self):
         super(CentralDifferenceSolver, self).__init__()
@@ -45,7 +45,7 @@ class CentralDifferenceSolver(Solver):
 
     def calculate(self, M, C, K, F, t_start_idx, t_end_idx):
         """
-        Perform calculation with the explicit Zhai solver [Zhai 1996]
+        Perform calculation with the explicit central difference solver
 
         :param M: Mass matrix
         :param C: Damping matrix
@@ -146,6 +146,8 @@ class CentralDifferenceSolver(Solver):
                 self.u[t2, :] = u_new
                 self.v[t2, :] = v
                 self.a[t2, :] = a
+
+                self.F_out[t2, :] = np.copy(self.F)
 
                 t2 += 1
 
