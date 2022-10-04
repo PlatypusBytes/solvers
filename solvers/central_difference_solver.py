@@ -2,11 +2,12 @@ from solvers.base_solver import Solver
 
 import numpy as np
 from numpy.linalg import solve, inv
-from scipy.sparse.linalg import spsolve, splu
+from scipy.sparse.linalg import splu
 from scipy.sparse.linalg import inv as sp_inv
 from scipy.sparse import issparse, csc_matrix, diags
-
 from tqdm import tqdm
+import logging
+
 
 class CentralDifferenceSolver(Solver):
     """
@@ -17,6 +18,7 @@ class CentralDifferenceSolver(Solver):
 
        - :self.is_lumped:      bool which is true if mass matrix should be lumped and damping matrix is to be neglected
     """
+
     def __init__(self):
         super(CentralDifferenceSolver, self).__init__()
 
@@ -28,7 +30,6 @@ class CentralDifferenceSolver(Solver):
         load vector
 
         :param u: displacement at time t
-        :param F: External force matrix
         :param t: current time step
         :return:
         """
@@ -45,7 +46,7 @@ class CentralDifferenceSolver(Solver):
 
     def calculate(self, M, C, K, F, t_start_idx, t_end_idx):
         """
-        Perform calculation with the explicit central difference solver
+        Perform calculation with the explicit central difference solver.
 
         :param M: Mass matrix
         :param C: Damping matrix
@@ -56,30 +57,43 @@ class CentralDifferenceSolver(Solver):
         :return:
         """
 
+        logging.warning("In this Central Difference solver, the displacements are stored on time step t, while the \n"
+                        "velocities and accelerations are stored on time step t-1. Especially take note when \n"
+                        "self.output_interval>1, as the displacements, velocities and accelerations are currently not \n"
+                        "available on equal time indices.")
+
         self.initialise_stage(F)
 
         # check if sparse calculation should be performed
         M, C, K = self.check_for_sparse(M, C, K)
 
+        # if lumped is selected, the M matrix is lumped and de Damping matrix is neglected
         if self.is_lumped:
-            M = M.diagonal()
-            M = diags(M).tocsc()
+            logging.warning("Mass matrix is lumped and damping matrix is neglected, 'set self.is_lumped' on false, if "
+                            "this behaviour is not desired")
 
-            inv_M = sp_inv(M).tocsc()
+            if self._is_sparse_calculation:
+                M = M.diagonal()
+                M = diags(M).tocsc()
+                inv_M = sp_inv(M).tocsc()
+                C = csc_matrix((self.number_equations, self.number_equations))
+            else:
+                M = np.diag(np.diag(M))
+                inv_M = inv(M)
+                C = np.zeros((self.number_equations, self.number_equations))
 
-            C = csc_matrix((self.number_equations, self.number_equations))
-
-        elif self._is_sparse_calculation:
-            inv_M = sp_inv(M).tocsc()
         else:
-            inv_M = inv(M)
+            if self._is_sparse_calculation:
+                inv_M = sp_inv(M).tocsc()
+            else:
+                inv_M = inv(M)
 
         self.update_output_arrays(t_start_idx, t_end_idx)
         # validate input
-        self.validate_input( t_start_idx, t_end_idx)
+        self.validate_input(t_start_idx, t_end_idx)
 
-        t_step = (self.time[t_end_idx] - self.time[t_start_idx]) / (
-            (t_end_idx - t_start_idx))
+        # calculate step size
+        t_step = (self.time[t_end_idx] - self.time[t_start_idx]) / (t_end_idx - t_start_idx)
 
         # initial force conditions: for computation of initial acceleration
         self.update_rhs_at_time_step(t_start_idx)
@@ -88,16 +102,15 @@ class CentralDifferenceSolver(Solver):
         # get initial displacement, velocity, acceleration
         u = self.u0
         v = self.v0
-
         a = inv_M.dot(self.F - K.dot(u) - C.dot(v))
 
         # calculate time factors
-        fact0 = 1/t_step**2
-        fact1 = 1/(2*t_step)
-        fact2 = 2*fact0
-        fact3 = 1/fact2
+        fact0 = 1 / t_step ** 2
+        fact1 = 1 / (2 * t_step)
+        fact2 = 2 * fact0
+        fact3 = 1 / fact2
 
-        u_prev = u - t_step*v + fact3*a
+        u_prev = u - t_step * v + fact3 * a
 
         M_till = fact0 * M + fact1 * C
 
@@ -128,7 +141,7 @@ class CentralDifferenceSolver(Solver):
             force = self.calculate_force(u, t)
 
             internal_force_part_1 = (K - fact2 * M).dot(u)
-            internal_force_part_2 = (fact0 * M - fact1*C).dot(u_prev)
+            internal_force_part_2 = (fact0 * M - fact1 * C).dot(u_prev)
 
             # calculate displacement at new time step
             if self._is_sparse_calculation:

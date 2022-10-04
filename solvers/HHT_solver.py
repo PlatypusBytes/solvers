@@ -3,7 +3,6 @@ from solvers.base_solver import Solver
 import numpy as np
 from numpy.linalg import solve, inv
 from scipy.sparse.linalg import splu
-from scipy.sparse import issparse, csc_matrix
 from tqdm import tqdm
 import logging
 
@@ -65,9 +64,6 @@ class HHTSolver(Solver):
         self.update_rhs_at_non_linear_iteration(t,u=u)
 
         force = self.F
-        # Convert force vector to a 1d numpy array
-        if issparse(force):
-            force = force.toarray()[:, 0]
 
         # calculate force increment with respect to the previous time step
         d_force = force - F_previous
@@ -142,10 +138,7 @@ class HHTImplicitForce(HHTSolver):
         self.update_rhs_at_non_linear_iteration(t_start_idx,u=u)
 
         # initial force conditions: for computation of initial acceleration
-        if issparse(self.F):
-            d_force = self.F.toarray()[:, 0]
-        else:
-            d_force = self.F
+        d_force = self.F
 
         a = self.calculate_initial_acceleration(M, C, K, d_force, u, v)
 
@@ -300,8 +293,6 @@ class HHTExplicit(HHTSolver):
         t_step = (self.time[t_end_idx] - self.time[t_start_idx]) / (
             (t_end_idx - t_start_idx))
 
-        t_step_alpha = (1-self.alpha)*t_step +self.alpha*t_step
-
         # constants for the Newmark integration
         alpha = self.alpha
         beta = self.beta
@@ -311,10 +302,7 @@ class HHTExplicit(HHTSolver):
         self.update_rhs_at_time_step(t_start_idx)
         self.update_rhs_at_non_linear_iteration(t_start_idx, u=self.u0)
 
-        if issparse(self.F):
-            d_force = self.F.toarray()[:, 0]
-        else:
-            d_force = self.F
+        d_force = self.F
 
         # initial conditions u, v, a
         u = self.u0

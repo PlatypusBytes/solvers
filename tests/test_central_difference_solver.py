@@ -1,5 +1,4 @@
 import unittest
-import pytest
 
 from solvers.central_difference_solver import CentralDifferenceSolver
 
@@ -7,7 +6,6 @@ from tests.utils import *
 
 import numpy as np
 from scipy import sparse
-
 
 class TestCentralDifference(unittest.TestCase):
     def setUp(self):
@@ -66,6 +64,11 @@ class TestCentralDifference(unittest.TestCase):
                 2,
             ),
         )
+
+    def test_nd_array_solver_central_difference(self):
+        self.M, self.K, self.C, self.F = set_matrices_as_np_array(self.M, self.K, self.C, self.F)
+        # set_matrices_as_sparse()
+        self.run_central_difference_test(CentralDifferenceSolver)
 
     def test_sparse_solver_central_difference(self):
         self.M, self.K, self.C, self.F = set_matrices_as_sparse(self.M, self.K, self.C, self.F)

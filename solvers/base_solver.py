@@ -111,11 +111,11 @@ class Solver:
         self.time = np.array(time)
 
         # find indices of time steps which should be stored based on output interval
-        self.output_time_indices = np.arange(0,len(self.time),self.output_interval)
+        self.output_time_indices = np.arange(0, len(self.time), self.output_interval)
 
         # make sure last time step is included
-        if not np.isclose(self.output_time_indices[-1], len(self.time)-1):
-            self.output_time_indices = np.append(self.output_time_indices, len(self.time)-1)
+        if not np.isclose(self.output_time_indices[-1], len(self.time) - 1):
+            self.output_time_indices = np.append(self.output_time_indices, len(self.time) - 1)
 
         # initialise result arrays
         self.output_time = self.time[self.output_time_indices]
@@ -162,8 +162,9 @@ class Solver:
             def load_func(t, **kwargs):
                 """
                 Gets Force at time t from Force matrix
+
                 :param t: time index
-                :param kwargs: optional key word arguments, this is required for self.update_rhs_at_time_step_func
+                :param kwargs: key word arguments, this is required for self.update_rhs_at_time_step_func
                 :return:
                 """
                 if self.force_matrix is not None:
@@ -173,7 +174,7 @@ class Solver:
 
             self.update_rhs_at_time_step_func = load_func
 
-    def update_rhs_at_time_step(self,t, **kwargs):
+    def update_rhs_at_time_step(self, t, **kwargs):
         """
         Updates force vector at a time step
 
@@ -183,6 +184,10 @@ class Solver:
         """
 
         self.F = self.update_rhs_at_time_step_func(t, **kwargs)
+
+        # convert sparse matrix to a 1d vector
+        if issparse(self.F):
+            self.F = self.F.toarray()[:, 0]
 
     def update_rhs_at_non_linear_iteration(self, t, **kwargs):
         """
@@ -201,7 +206,7 @@ class Solver:
         if issparse(self.F):
             self.F = self.F.toarray()[:, 0]
 
-    def update_output_arrays(self,t_start_idx, t_end_idx):
+    def update_output_arrays(self, t_start_idx, t_end_idx):
         """
         Updates output arrays. If either the t_start_idx or t_end_idx is missing in the output indices array, these
         indices are added.
@@ -213,7 +218,8 @@ class Solver:
 
         # add start time index if required
         if t_start_idx not in self.output_time_indices:
-            closest_greater_index = np.where(self.output_time_indices[self.output_time_indices >t_start_idx].min() == self.output_time_indices)[0]
+            closest_greater_index = np.where(
+                self.output_time_indices[self.output_time_indices > t_start_idx].min() == self.output_time_indices)[0]
             self.output_time_indices = np.insert(self.output_time_indices, closest_greater_index, t_start_idx)
             self.u = np.insert(self.u, closest_greater_index, np.zeros(self.u.shape[1]), axis=0)
             self.v = np.insert(self.v, closest_greater_index, np.zeros(self.v.shape[1]), axis=0)
@@ -226,7 +232,9 @@ class Solver:
 
         # add end time index if required
         if t_end_idx not in self.output_time_indices:
-            closest_greater_index = np.where(self.output_time_indices[self.output_time_indices >t_end_idx].min() == self.output_time_indices)[0]
+            closest_greater_index = np.where(
+                self.output_time_indices[self.output_time_indices > t_end_idx].min() == self.output_time_indices)[0]
+
             self.output_time_indices = np.insert(self.output_time_indices, closest_greater_index, t_end_idx)
             self.u = np.insert(self.u, closest_greater_index, np.zeros(self.u.shape[1]), axis=0)
             self.v = np.insert(self.v, closest_greater_index, np.zeros(self.v.shape[1]), axis=0)
