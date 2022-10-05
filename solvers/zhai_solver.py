@@ -1,21 +1,15 @@
 from solvers.base_solver import Solver
 
-import os
-import pickle
-
 import numpy as np
-from numpy.linalg import solve, inv
-from scipy.sparse.linalg import spsolve
+from numpy.linalg import inv
 from scipy.sparse.linalg import inv as sp_inv
-from scipy.sparse import issparse, csc_matrix
 
 from tqdm import tqdm
-import logging
 
 
 class ZhaiSolver(Solver):
     """
-    Zhai Solver class. This class contains the explicit solver according to [Zhai 1996]. This class bases from
+    Zhai Solver class. This class contains the explicit solver according to :cite:p: `Zhai_1996`. This class bases from
     :class:`~rose.model.solver.Solver`.
 
     :Attributes:
@@ -53,7 +47,7 @@ class ZhaiSolver(Solver):
         a0 = self.evaluate_acceleration(inv_M, C, K, F, u0, v0)
         return inv_M, a0
 
-    def calculate_force(self, u, F, t):
+    def calculate_force(self, u, t):
         """
         Calculate external force if a load function is given. If no load function is given, force is taken from current
         load vector
@@ -63,16 +57,11 @@ class ZhaiSolver(Solver):
         :param t: current time step
         :return:
         """
-        if self.load_func is not None:
-            force = self.load_func(u, t)
-            if issparse(force):
-                force = force.toarray()[:, 0]
-        else:
-            if issparse(F):
-                force = F[:, t]
-                force = force.toarray()[:, 0]
-            else:
-                force = F[:, t]
+
+        # calculates force with custom load function
+        self.update_rhs_at_non_linear_iteration(t, u=u)
+
+        force = self.F
 
         return force
 
@@ -146,20 +135,22 @@ class ZhaiSolver(Solver):
         :return:
         """
 
+        self.initialise_stage(F)
+
         # check if sparse calculation should be performed
         M, C, K = self.check_for_sparse(M, C, K)
 
         # validate input
-        self.validate_input(F, t_start_idx, t_end_idx)
+        self.validate_input(t_start_idx, t_end_idx)
 
         t_step = (self.time[t_end_idx] - self.time[t_start_idx]) / (
             (t_end_idx - t_start_idx))
 
         # initial force conditions: for computation of initial acceleration
-        if issparse(F):
-            force = F[:, t_start_idx].toarray()[:, 0]
-        else:
-            force = F[:, t_start_idx]
+        self.update_rhs_at_time_step(t_start_idx)
+        self.update_rhs_at_non_linear_iteration(t_start_idx, u=self.u0)
+
+        force = self.F
 
         # get initial displacement, velocity, acceleration and inverse mass matrix
         u = self.u0
@@ -173,6 +164,8 @@ class ZhaiSolver(Solver):
         self.v[output_time_idx, :] = v
         self.a[output_time_idx, :] = a
 
+        self.F_out[output_time_idx, :] = np.copy(self.F)
+
         a_old = np.zeros(self.number_equations)
 
         # define progress bar
@@ -185,6 +178,8 @@ class ZhaiSolver(Solver):
 
         is_initial = True
         for t in range(t_start_idx + 1, t_end_idx + 1):
+            self.update_rhs_at_time_step(t, u=u)
+
             # update progress bar
             pbar.update(1)
 
@@ -196,7 +191,7 @@ class ZhaiSolver(Solver):
             u_new, v_new = self.prediction(u, v, a, a_old, t_step, is_initial)
 
             # Calculate predicted external force vector
-            force = self.calculate_force(u_new, F, t)
+            force = self.calculate_force(u_new, t)
 
             # Calculate predicted acceleration
             a_new = self.evaluate_acceleration(inv_M, C, K, force, u_new, v_new)
@@ -205,7 +200,7 @@ class ZhaiSolver(Solver):
             u_new, v_new = self.newmark_iteration(u, v, a, a_new, t_step)
 
             # Calculate corrected force vector
-            force = self.calculate_force(u_new, F, t)
+            force = self.calculate_force(u_new, t)
 
             # Calculate corrected acceleration
             a_new = self.evaluate_acceleration(inv_M, C, K, force, u_new, v_new)
@@ -215,6 +210,8 @@ class ZhaiSolver(Solver):
                 self.u[t2, :] = u_new
                 self.v[t2, :] = v_new
                 self.a[t2, :] = a_new
+
+                self.F_out[t2, :] = np.copy(self.F)
 
                 t2 += 1
 

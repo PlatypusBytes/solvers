@@ -6,7 +6,7 @@ from scipy.sparse.linalg import splu
 from tqdm import tqdm
 import logging
 
-class NewmarkSolver(Solver):
+class HHTSolver(Solver):
     """
     Newmark Solver class. This class contains the implicit incremental Newmark solver. This class bases from
     :class:`~rose.model.solver.Solver`.
@@ -18,9 +18,12 @@ class NewmarkSolver(Solver):
     """
 
     def __init__(self):
-        super(NewmarkSolver, self).__init__()
-        self.beta = 0.25
-        self.gamma = 0.5
+        super(HHTSolver, self).__init__()
+
+        self.alpha = 1/6
+
+        self.beta = (1 + self.alpha)**2/4
+        self.gamma = (1 + 2 * self.alpha)/2
 
     def calculate_initial_acceleration(self, m_global, c_global, k_global, force_ini, u, v):
         r"""
@@ -87,10 +90,11 @@ class NewmarkSolver(Solver):
                       "Use 'NewmarkImplicitForce' or 'NewmarkExplicit' instead")
 
 
-class NewmarkImplicitForce(NewmarkSolver):
+
+class HHTImplicitForce(HHTSolver):
 
     def __init__(self):
-        super(NewmarkImplicitForce, self).__init__()
+        super(HHTImplicitForce, self).__init__()
         self.max_iter = 15
         self.tolerance = 1e-5
 
@@ -122,6 +126,7 @@ class NewmarkImplicitForce(NewmarkSolver):
             (t_end_idx - t_start_idx))
 
         # constants for the Newmark integration
+        alpha = self.alpha
         beta = self.beta
         gamma = self.gamma
 
@@ -133,7 +138,6 @@ class NewmarkImplicitForce(NewmarkSolver):
         self.update_rhs_at_non_linear_iteration(t_start_idx,u=u)
 
         # initial force conditions: for computation of initial acceleration
-
         d_force = self.F
 
         a = self.calculate_initial_acceleration(M, C, K, d_force, u, v)
@@ -152,7 +156,7 @@ class NewmarkImplicitForce(NewmarkSolver):
         self.F_out[output_time_idx, :] = np.copy(self.F)
 
         # combined stiffness matrix
-        K_till = K + C * (gamma / (beta * t_step)) + M * (1 / (beta * t_step ** 2))
+        K_till = K*(1-alpha) + C * ((gamma*(1-alpha)) / (beta * t_step)) + M * (1 / (beta * t_step ** 2))
 
         if self._is_sparse_calculation:
             inv_K_till = splu(K_till)
@@ -181,11 +185,11 @@ class NewmarkImplicitForce(NewmarkSolver):
             m_part = v * (1 / (beta * t_step)) + a * (1 / (2 * beta))
             m_part = M.dot(m_part)
             # updated damping
-            c_part = v * (gamma / beta) + a * (t_step * (gamma / (2 * beta) - 1))
+            c_part = (1 - alpha) * (v * (gamma / beta) + a * (t_step * (gamma / (2 * beta) - 1)))
             c_part = C.dot(c_part)
 
             # set ext force from previous time iteration
-            force_ext_prev = d_force + m_part + c_part
+            force_ext_prev = d_force*(1-alpha) + m_part + c_part
 
             # initialise
             du_tot = 0
@@ -200,7 +204,7 @@ class NewmarkImplicitForce(NewmarkSolver):
                 d_force, F_previous_i = self.update_force(u, F_previous, t)
 
                 # external force
-                force_ext = d_force + m_part + c_part
+                force_ext = d_force*(1-alpha) + m_part + c_part
 
                 # solve
                 if self._is_sparse_calculation:
@@ -261,7 +265,7 @@ class NewmarkImplicitForce(NewmarkSolver):
         pbar.close()
 
 
-class NewmarkExplicit(NewmarkSolver):
+class HHTExplicit(HHTSolver):
 
     def calculate(self, M, C, K, F, t_start_idx, t_end_idx):
         """
@@ -286,11 +290,11 @@ class NewmarkExplicit(NewmarkSolver):
         self.validate_input(t_start_idx, t_end_idx)
 
         # calculate time step size
-        # todo correct t_step, as it is not correct, but tests succeed
         t_step = (self.time[t_end_idx] - self.time[t_start_idx]) / (
             (t_end_idx - t_start_idx))
 
         # constants for the Newmark integration
+        alpha = self.alpha
         beta = self.beta
         gamma = self.gamma
 
@@ -305,9 +309,6 @@ class NewmarkExplicit(NewmarkSolver):
         v = self.v0
         a = self.calculate_initial_acceleration(M, C, K, d_force, u, v)
 
-        # initialise delta velocity
-        dv = np.zeros(len(v))
-
         output_time_idx = np.where(self.output_time_indices == t_start_idx)[0][0]
         t2 = output_time_idx + 1
 
@@ -320,7 +321,7 @@ class NewmarkExplicit(NewmarkSolver):
         self.F_out[output_time_idx, :] = np.copy(self.F)
 
         # combined stiffness matrix
-        K_till = K + C * (gamma / (beta * t_step)) + M * (1 / (beta * t_step ** 2))
+        K_till = K*(1-alpha) + C * ((gamma*(1-alpha)) / (beta * t_step)) + M * (1 / (beta * t_step ** 2))
 
         # calculate inverse K_till
         if self._is_sparse_calculation:
@@ -351,14 +352,14 @@ class NewmarkExplicit(NewmarkSolver):
             m_part = v * (1 / (beta * t_step)) + a * (1 / (2 * beta))
             m_part = M.dot(m_part)
             # updated damping
-            c_part = v * (gamma / beta) + a * (t_step * (gamma / (2 * beta) - 1))
+            c_part = (1-alpha)*(v * (gamma / beta) + a * (t_step * (gamma / (2 * beta) - 1)))
             c_part = C.dot(c_part)
 
             # update external force
             d_force, F_previous = self.update_force(u, F_previous, t)
 
             # external force
-            force_ext = d_force + m_part + c_part
+            force_ext = d_force*(1-alpha) + m_part + c_part
 
             # solve
             if self._is_sparse_calculation:
