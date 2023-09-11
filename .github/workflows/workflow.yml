@@ -40,11 +40,11 @@ jobs:
         pip install tox tox-gh-actions
     - name: Test with tox
       run: tox
-      
+
   coverage:
     name: Combine & check coverage.
     if: always()
-    needs: tests
+    needs: test
     runs-on: ubuntu-latest
 
     steps:
