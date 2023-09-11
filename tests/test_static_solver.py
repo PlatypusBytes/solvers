@@ -73,7 +73,7 @@ class TestStatic(unittest.TestCase):
 
 
     def test_sparse_solver_static(self):
-        _,self.K, _, self.F = set_matrices_as_sparse(None, self.K, None, self.F)
+        _,self.K, _, self.F = set_matrices_as_sparse(np.empty(None), self.K, np.empty(None), self.F)
         self.run_test_solver_static()
 
 
