@@ -52,8 +52,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install .'[testing]'
           pytest tests --cov --cov-report=html:coverage_report
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./coverage_report
+      - name: Generate Report
+        run: |
+          pip install coverage
+          coverage run -m tests
+      - name: Upload Coverage to Codecov
+        uses: codecov/codecov-action@v3
