@@ -1,10 +1,7 @@
-name: Workflow
+name: Tests
 
 # Controls when the workflow will run
 on:
-  push:
-    branches:
-      - master
   pull_request:
     branches:
       - '**'
@@ -40,31 +37,3 @@ jobs:
         pip install tox tox-gh-actions
     - name: Test with tox
       run: tox
-    - name: Upload coverage data
-      uses: actions/upload-artifact@v3
-      with:
-        name: coverage-data
-        path: .coverage.*
-        if-no-files-found: ignore
-
-  coverage:
-    name: Combine & check coverage.
-    if: always()
-    needs: test
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/download-artifact@v3
-        with:
-          name: coverage-data
-      - name: Combine coverage
-        run: |
-          python -Im coverage combine
-          python -Im coverage html --skip-covered --skip-empty
-          python -Im coverage report --format=markdown >> $GITHUB_STEP_SUMMARY
-      - name: Upload HTML report if check failed.
-        uses: actions/upload-artifact@v3
-        with:
-          name: html-report
-          path: htmlcov
-        if: ${{ failure() }}
