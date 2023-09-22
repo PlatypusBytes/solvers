@@ -52,9 +52,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install .'[testing]'
           pytest tests --cov --cov-report=html:coverage_report
-      - name: Generate Report
+      - name: Generate code coverage report
         run: |
-          pip install coverage
-          coverage run -m tests
+          pytest tests --cov --cov-report=html:coverage_report
       - name: Upload Coverage to Codecov
         uses: codecov/codecov-action@v3
