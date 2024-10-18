@@ -20,7 +20,7 @@ class NewmarkOgniBene(Solver):
        - :self.gamma:    Newmark numerical stability parameter
     """
 
-    def __init__(self):
+    def __init__(self, Fy0, alpha_y, kb, cb, S0, Hd0, alpha_d, Hs0, alpha_s):
         super(NewmarkOgniBene, self).__init__()
         self.beta = 0.25
         self.gamma = 0.5
@@ -28,22 +28,38 @@ class NewmarkOgniBene(Solver):
         self.tolerance = 1e-5
 
         self.Fb_max = 0.0
-        self.Fy = 70e3
-        self.Fy0 = 70e3
-        self.alpha_y =12
+        # self.Fy = 70e3
+        # self.Fy0 = 70e3
+        self.Fy = Fy0
+        self.Fy0 = Fy0
+        self.alpha_y = alpha_y
+        # self.alpha_y =12
 
-        self.cb = 0.12e6
-        self.kb = 210e6
+        self.cb = cb
+        self.kb = kb
         self.S = 0
-        self.S0 = 0.004
+        self.S0 = S0
 
-        self.Hd = 0.6e9
-        self.Hd0 = 0.6e9
-        self.alpha_d =2.8
+        self.Hd = Hd0
+        self.Hd0 = Hd0
+        self.alpha_d = alpha_d
 
-        self.Hs = 0.7e12
-        self.Hs0 = 0.7e12
-        self.alpha_s = 0.4
+        self.Hs = Hs0
+        self.Hs0 = Hs0
+        self.alpha_s = alpha_s
+
+        # self.cb = 0.12e6
+        # self.kb = 210e6
+        # self.S = 0
+        # self.S0 = 0.004
+        #
+        # self.Hd = 0.6e9
+        # self.Hd0 = 0.6e9
+        # self.alpha_d =2.8
+        #
+        # self.Hs = 0.7e12
+        # self.Hs0 = 0.7e12
+        # self.alpha_s = 0.4
 
         self.H = 1/((1/self.Hd0)+(1/self.Hs0))
 
@@ -106,7 +122,7 @@ class NewmarkOgniBene(Solver):
             self.F_ballast = alpha * self.F_ballast_prev + alpha* self.t_step *(self.H * v_ballast + self.kb/self.cb * self.H *du_star + self.kb/self.cb*self.Fy)
             self.delta_up = self.delta_up_prev + (self.F_ballast - self.F_ballast_prev) / self.H
 
-            new_k = self.F_ballast / u_ballast
+            # new_k = self.F_ballast / u_ballast
 
             # new_c = self.F_ballast / v[ballast_index]
 
@@ -138,17 +154,8 @@ class NewmarkOgniBene(Solver):
         # copy force vector such that force vector data at each time step is maintained
         F_total = np.copy(force)
 
-        accum_disp = np.zeros(len(u))
-        K = np.zeros((len(u), len(u)))
-        C = np.zeros((len(u), len(u)))
 
-
-
-
-
-
-
-        return d_force, F_total, accum_disp, self.K, C
+        return d_force, F_total, self.K
 
     def calculate(self, M, C, K, F, t_start_idx, t_end_idx, n_cycles):
 
@@ -157,15 +164,20 @@ class NewmarkOgniBene(Solver):
         self.S = self.S0
         for i in range(n_cycles):
             self.Fb_max = self.Fy0
+            # self.Fb_max = 157e3
             self.calculate_cycle(M, C, K, F, t_start_idx, t_end_idx)
             self.S = self.S + self.delta_up
             all_S.append(self.S)
 
+            # rate = np.log10(self.S/self.S0)
             rate = np.log(self.S/self.S0)
             time_var = self.S-self.S0
 
             self.Hd = self.Hd0 *np.exp(self.alpha_d * rate *time_var)
             self.Hs = self.Hs0 *np.exp(self.alpha_s * rate *time_var)
+
+            dhd = self.Hd - self.Hd0
+            dhs = self.Hs - self.Hs0
 
             self.H = 1 / ((1 / self.Hd) + (1 / self.Hs))
 
@@ -173,7 +185,20 @@ class NewmarkOgniBene(Solver):
 
             K = np.copy(self.K)
 
-        plt.plot(all_cycles,all_S)
+        # plt.plot(all_cycles,all_S)
+        plt.semilogx(all_cycles, all_S)
+        plt.xlim(10,10000)
+        plt.ylim(0.025, 0)
+        plt.grid(True, which="both", ls="-", alpha=0.2)
+        plt.grid(True, which="major", ls="-", alpha=0.5)
+        # plt.xlabel('X (log scale)')
+        # plt.ylabel('Y')
+        # plt.title('Plot with Logarithmic X-Axis')
+        # plt.legend()
+
+        # Add minor grid lines
+        plt.minorticks_on()
+
         plt.show()
 
         a=1+1
@@ -293,7 +318,7 @@ class NewmarkOgniBene(Solver):
             while not converged and i < self.max_iter:
 
                 # update external force
-                d_force, F_previous_i, accum_disp, new_K, new_C = self.update_force(u,v, F_previous, t)
+                d_force, F_previous_i, new_K = self.update_force(u,v, F_previous, t)
 
                 # update stiffness matrix
                 # K_till = new_K + C * (gamma / (beta * self.t_step)) + M * (1 / (beta * self.t_step ** 2))
@@ -313,9 +338,9 @@ class NewmarkOgniBene(Solver):
                 #     du = inv_K_till.dot(force_ext - force_previous)
 
                 if self._is_sparse_calculation:
-                    du = spsolve(K_till,force_ext - force_previous)
+                    du = spsolve(K_till, force_ext - force_previous)
                 else:
-                    du = solve(K_till,force_ext - force_previous)
+                    du = solve(K_till, force_ext - force_previous)
                     # du = inv_K_till.dot(force_ext - force_previous)
 
                 # set du for first iteration
@@ -337,7 +362,6 @@ class NewmarkOgniBene(Solver):
                 )
 
                 u = u + du
-                # v = v + dv
 
                 if not converged:
                     force_previous = np.copy(force_ext)

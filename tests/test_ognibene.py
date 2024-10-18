@@ -3,6 +3,7 @@
 # for newmark pg 782
 import unittest
 import pytest
+from fontTools.ttLib.tables.E_B_D_T_ import ebdt_bitmap_format_9
 
 from solvers.newmark_ognibene import NewmarkOgniBene
 
@@ -22,6 +23,36 @@ class TestOgniBene(unittest.TestCase):
             "gamma": 0.5,
         }
 
+        # test 1
+        Fy0 = 70e3
+        alpha_y = 12
+        Hd0 = 0.2e9 # parameter in paper = 0.6e9
+        alpha_d = 2.8 * 1000 # parameter in paper =2.8
+        Hs0 = 0.7e12
+        alpha_s = 0.4
+        S0 = 0.004
+        F_max = 98e3
+
+
+        # test 2
+        # Fy0 = 80e3
+        # alpha_y = 20
+        # Hd0 = 0.6e9 # parameter in paper = 1.4e9
+        # alpha_d = 1e3 # parameter in paper = 1.0
+        # Hs0 = 0.2e12
+        # alpha_s = 0.16
+        # S0 = 0.006
+        # F_max = 157e3
+
+        # damping A
+        # cb =0.12e6
+        # cf =0.15e6
+
+        # damping B
+        cb =2e6
+        cf =2e6
+
+
         n_time_steps =1000
 
         duration = 1
@@ -31,7 +62,8 @@ class TestOgniBene(unittest.TestCase):
 
         freq =3 # load frequency [hz]
         # Scale and shift to get values between 5 and 100
-        max_value = 98e3
+
+        max_value = F_max
         min_value = 5e3
         amplitude = (max_value - min_value) / 2
         offset = (max_value + min_value) / 2
@@ -47,6 +79,14 @@ class TestOgniBene(unittest.TestCase):
         self.K = np.zeros((n_equations,n_equations))
         self.C = np.zeros((n_equations,n_equations))
         self.F = np.zeros((n_equations,n_time_steps+1))
+
+
+        # cumulative parameters
+
+
+
+
+
 
         # rail
         mass_rail = 60
@@ -72,7 +112,7 @@ class TestOgniBene(unittest.TestCase):
 
         # ballast
         kb = 210e6
-        cb = 0.12e6
+        # cb = 0.12e6
         K_b = np.array([[kb, -kb], [-kb, kb]])
         C_b = np.array([[cb, -cb], [-cb, cb]])
         equation_nbrs_b = [1, 2]
@@ -87,7 +127,7 @@ class TestOgniBene(unittest.TestCase):
 
         # foundation
         kf = 750e6
-        cf = 0.15e6
+        # cf = 0.15e6
         K_f = np.array([[kf]])
         C_f = np.array([[cf]])
         equation_nbrs_f = [2]
@@ -119,19 +159,21 @@ class TestOgniBene(unittest.TestCase):
         # )
 
         self.number_eq = n_equations
+
+        self.res = NewmarkOgniBene(Fy0, alpha_y,kb,cb, S0, Hd0, alpha_d, Hs0, alpha_s)
         return
 
 
 
-    def run_newmark_test(self,solver):
-        res = solver()
+    def run_test(self):
 
-        res.beta = self.settings["beta"]
-        res.gamma = self.settings["gamma"]
 
-        res.initialise(self.number_eq, self.time)
+        self.res.beta = self.settings["beta"]
+        self.res.gamma = self.settings["gamma"]
 
-        res.calculate(self.M, self.C, self.K, self.F, 0, self.n_steps, 1000)
+        self.res.initialise(self.number_eq, self.time)
+
+        self.res.calculate(self.M, self.C, self.K, self.F, 0, self.n_steps, 1000)
         #
         # plt.plot(self.time, res.u[:, 0])
         # plt.plot(self.time, res.u[:, 1])
@@ -168,7 +210,7 @@ class TestOgniBene(unittest.TestCase):
 
     def test_np_array_solver_newmark_ognibene(self):
         self.M, self.K, self.C, self.F = set_matrices_as_np_array(self.M, self.K, self.C, self.F)
-        self.run_newmark_test(NewmarkOgniBene)
+        self.run_test()
 
 
         a=1+1
