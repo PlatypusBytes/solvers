@@ -94,11 +94,12 @@ class CentralDifferenceSolver(Solver):
         if self.is_lumped:
             M = self.lump_method.apply(M)
             C = self.lump_method.apply(C)
-
-        if self._is_sparse_calculation:
-            inv_M = sp_inv(M).tocsc()
+            inv_M = 1 / M
         else:
-            inv_M = inv(M)
+            if self._is_sparse_calculation:
+                inv_M = sp_inv(M).tocsc()
+            else:
+                inv_M = inv(M)
 
         # get initial displacement, velocity, acceleration
         u = self.u0
@@ -110,10 +111,13 @@ class CentralDifferenceSolver(Solver):
 
         # Effective mass matrix
         M_till = 1 / t_step ** 2 * M + 1 / (2 * t_step) * C
-        if self._is_sparse_calculation:
-            inv_M_till = sp_inv(M_till).tocsc()
+        if self.is_lumped:
+            inv_M_till = 1 / M_till
         else:
-            inv_M_till = inv(M_till)
+            if self._is_sparse_calculation:
+                inv_M_till = sp_inv(M_till).tocsc()
+            else:
+                inv_M_till = inv(M_till)
 
         output_time_idx = np.where(self.output_time_indices == t_start_idx)[0][0]
         t2 = output_time_idx + 1
@@ -142,9 +146,15 @@ class CentralDifferenceSolver(Solver):
 
             # calculate displacement at new time step
             if self._is_sparse_calculation:
-                u_new = inv_M_till.dot(force - internal_force_part_1 - internal_force_part_2)
+                if self.is_lumped:
+                    u_new = np.multiply(inv_M_till, force - internal_force_part_1 - internal_force_part_2)
+                else:
+                    u_new = inv_M_till.dot(force - internal_force_part_1 - internal_force_part_2)
             else:
-                u_new = inv_M_till.dot(force - internal_force_part_1 - internal_force_part_2)
+                if self.is_lumped:
+                    u_new = np.multiply(inv_M_till, force - internal_force_part_1 - internal_force_part_2)
+                else:
+                    u_new = inv_M_till.dot(force - internal_force_part_1 - internal_force_part_2)
 
             # calculate velocity and acceleration at current time step
             v = 1 / (2 * t_step) * (-u_prev + u_new)
