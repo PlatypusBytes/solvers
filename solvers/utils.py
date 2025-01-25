@@ -1,5 +1,6 @@
 from enum import Enum
 import numpy as np
+from scipy.sparse import isspmatrix
 
 
 class LumpingMethod(Enum):
@@ -34,8 +35,10 @@ class LumpingMethod(Enum):
         :param M_consistent: The consistent mass matrix.
         :return: The lumped matrix.
         """
-        M_lumped = np.zeros_like(M_consistent)
-        np.fill_diagonal(M_lumped, M_consistent.sum(axis=1))
+        if isspmatrix(M_consistent):
+            M_lumped = M_consistent.sum(axis=1).A.ravel()
+        else:
+            M_lumped = M_consistent.sum(axis=1)
         return M_lumped
 
     @staticmethod

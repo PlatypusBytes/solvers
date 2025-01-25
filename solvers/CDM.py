@@ -110,7 +110,10 @@ class CentralDifferenceSolver(Solver):
 
         # Effective mass matrix
         M_till = 1 / t_step ** 2 * M + 1 / (2 * t_step) * C
-        inv_M_till = inv(M_till)
+        if self._is_sparse_calculation:
+            inv_M_till = sp_inv(M_till).tocsc()
+        else:
+            inv_M_till = inv(M_till)
 
         output_time_idx = np.where(self.output_time_indices == t_start_idx)[0][0]
         t2 = output_time_idx + 1
