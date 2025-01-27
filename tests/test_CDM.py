@@ -67,20 +67,16 @@ class TestCentralDifference(unittest.TestCase):
 
     def test_nd_array_solver_central_difference(self):
         self.M, self.K, self.C, self.F = set_matrices_as_np_array(self.M, self.K, self.C, self.F)
-        # set_matrices_as_sparse()
         self.run_central_difference_test(CentralDifferenceSolver, lumped=False)
 
     def test_nd_array_solver_central_difference_lump(self):
         self.M, self.K, self.C, self.F = set_matrices_as_np_array(self.M, self.K, self.C, self.F)
-        # set_matrices_as_sparse()
         self.run_central_difference_test(CentralDifferenceSolver, lumped=True)
 
     def test_sparse_solver_central_difference(self):
         self.M, self.K, self.C, self.F = set_matrices_as_sparse(self.M, self.K, self.C, self.F)
-        # set_matrices_as_sparse()
         self.run_central_difference_test(CentralDifferenceSolver, lumped=False)
 
     def test_sparse_solver_central_difference_lump(self):
         self.M, self.K, self.C, self.F = set_matrices_as_sparse(self.M, self.K, self.C, self.F)
-        # set_matrices_as_sparse()
         self.run_central_difference_test(CentralDifferenceSolver, lumped=True)
