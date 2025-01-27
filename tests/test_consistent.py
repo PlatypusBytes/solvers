@@ -33,6 +33,7 @@ class TestLumpedMatrix:
         M_lumped = LumpingMethod.RowSum.apply(M_consistent)
         M_lumped_expected = np.array([3, 4., 3., 4.])
         np.testing.assert_array_almost_equal(M_lumped, M_lumped_expected)
+        assert np.sum(M_lumped) == np.sum(M_lumped_expected)
 
     def test_diagonal_scaling(self, M_consistent):
         """
@@ -41,6 +42,7 @@ class TestLumpedMatrix:
         M_lumped = LumpingMethod.DiagonalScaling.apply(M_consistent)
         M_lumped_expected = np.array([3.5, 3.5, 3.5, 3.5])
         np.testing.assert_array_almost_equal(M_lumped, M_lumped_expected)
+        assert np.sum(M_lumped) == np.sum(M_lumped_expected)
 
     def test_HRZ(self, M_consistent):
         """
@@ -49,3 +51,4 @@ class TestLumpedMatrix:
         M_lumped = LumpingMethod.MassProportion.apply(M_consistent)
         M_lumped_expected = np.array([3, 4., 3., 4.])
         np.testing.assert_array_almost_equal(M_lumped, M_lumped_expected)
+        assert np.sum(M_lumped) == np.sum(M_lumped_expected)
