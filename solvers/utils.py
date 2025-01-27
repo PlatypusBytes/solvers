@@ -52,8 +52,7 @@ class LumpingMethod(Enum):
         M_total = M_consistent.sum()
         diag_sum = M_consistent.diagonal().sum()
         scale_factor = M_total / diag_sum
-        M_lumped = np.zeros_like(M_consistent)
-        np.fill_diagonal(M_lumped, M_consistent.diagonal() * scale_factor)
+        M_lumped = M_consistent.diagonal() * scale_factor
         return M_lumped
 
     @staticmethod
@@ -66,7 +65,7 @@ class LumpingMethod(Enum):
         """
         M_total = M_consistent.sum()
         M_lumped = LumpingMethod.row_sum(M_consistent)
-        lumped_mass_total = M_lumped.diagonal().sum()
+        lumped_mass_total = M_lumped.sum()
         scaling_factor = M_total / lumped_mass_total
         M_lumped *= scaling_factor
         return M_lumped

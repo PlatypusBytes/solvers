@@ -31,11 +31,7 @@ class TestLumpedMatrix:
         Test the row-sum lumping method.
         """
         M_lumped = LumpingMethod.RowSum.apply(M_consistent)
-        M_lumped_expected = np.array([[3., 0., 0., 0.],
-                                      [0., 4., 0., 0.],
-                                      [0., 0., 3., 0.],
-                                      [0., 0., 0., 4.],
-                                      ])
+        M_lumped_expected = np.array([3, 4., 3., 4.])
         np.testing.assert_array_almost_equal(M_lumped, M_lumped_expected)
 
     def test_diagonal_scaling(self, M_consistent):
@@ -43,11 +39,7 @@ class TestLumpedMatrix:
         Test the diagonal scaling lumping method.
         """
         M_lumped = LumpingMethod.DiagonalScaling.apply(M_consistent)
-        M_lumped_expected = np.array([[3.5, 0., 0., 0.],
-                                      [0., 3.5, 0., 0.],
-                                      [0., 0., 3.5, 0.],
-                                      [0., 0., 0., 3.5],
-                                      ])
+        M_lumped_expected = np.array([3.5, 3.5, 3.5, 3.5])
         np.testing.assert_array_almost_equal(M_lumped, M_lumped_expected)
 
     def test_HRZ(self, M_consistent):
@@ -55,9 +47,5 @@ class TestLumpedMatrix:
         Test the HRZ lumping method.
         """
         M_lumped = LumpingMethod.MassProportion.apply(M_consistent)
-        M_lumped_expected = np.array([[3., 0., 0., 0.],
-                                      [0., 4., 0., 0.],
-                                      [0., 0., 3., 0.],
-                                      [0., 0., 0., 4.],
-                                      ])
+        M_lumped_expected = np.array([3, 4., 3., 4.])
         np.testing.assert_array_almost_equal(M_lumped, M_lumped_expected)
