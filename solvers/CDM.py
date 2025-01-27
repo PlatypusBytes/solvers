@@ -1,15 +1,11 @@
-from solvers.base_solver import Solver
-
 import numpy as np
-from numpy.linalg import solve, inv
-from scipy.sparse.linalg import splu
+from numpy.linalg import inv
 from scipy.sparse.linalg import inv as sp_inv
-from scipy.sparse import issparse, csc_matrix, diags
+from scipy.sparse import issparse
 from tqdm import tqdm
-import logging
+
+from solvers.base_solver import Solver
 from solvers.utils import LumpingMethod
-
-
 
 
 class CentralDifferenceSolver(Solver):
@@ -69,11 +65,6 @@ class CentralDifferenceSolver(Solver):
         :param t_end_idx: time index of end time for the analysis
         :return:
         """
-
-        logging.warning("In this Central Difference solver, the displacements are stored on time step t, while the \n"
-                        "velocities and accelerations are stored on time step t-1. Especially take note when \n"
-                        "self.output_interval>1, as the displacements, velocities and accelerations are currently not \n"
-                        "available on equal time indices.")
 
         self.initialise_stage(F)
 

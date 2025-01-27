@@ -2,7 +2,7 @@ import unittest
 
 from solvers.CDM import CentralDifferenceSolver
 
-from tests.utils import *
+from tests.utils import set_matrices_as_sparse, set_matrices_as_np_array
 
 import numpy as np
 from scipy import sparse
