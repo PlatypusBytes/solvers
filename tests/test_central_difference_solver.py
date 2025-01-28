@@ -2,7 +2,7 @@ import unittest
 
 from solvers.central_difference_solver import CentralDifferenceSolver
 
-from tests.utils import *
+from tests.utils import set_matrices_as_sparse, set_matrices_as_np_array
 
 import numpy as np
 from scipy import sparse
@@ -35,8 +35,8 @@ class TestCentralDifference(unittest.TestCase):
         self.number_eq = 2
         return
 
-    def run_central_difference_test(self, solver):
-        res = solver()
+    def run_central_difference_test(self, solver, lumped):
+        res = solver(lumped=lumped)
 
         res.initialise(self.number_eq, self.time)
         res.calculate(self.M, self.C, self.K, self.F, 0, self.n_steps)
@@ -67,10 +67,16 @@ class TestCentralDifference(unittest.TestCase):
 
     def test_nd_array_solver_central_difference(self):
         self.M, self.K, self.C, self.F = set_matrices_as_np_array(self.M, self.K, self.C, self.F)
-        # set_matrices_as_sparse()
-        self.run_central_difference_test(CentralDifferenceSolver)
+        self.run_central_difference_test(CentralDifferenceSolver, lumped=False)
+
+    def test_nd_array_solver_central_difference_lump(self):
+        self.M, self.K, self.C, self.F = set_matrices_as_np_array(self.M, self.K, self.C, self.F)
+        self.run_central_difference_test(CentralDifferenceSolver, lumped=True)
 
     def test_sparse_solver_central_difference(self):
         self.M, self.K, self.C, self.F = set_matrices_as_sparse(self.M, self.K, self.C, self.F)
-        # set_matrices_as_sparse()
-        self.run_central_difference_test(CentralDifferenceSolver)
+        self.run_central_difference_test(CentralDifferenceSolver, lumped=False)
+
+    def test_sparse_solver_central_difference_lump(self):
+        self.M, self.K, self.C, self.F = set_matrices_as_sparse(self.M, self.K, self.C, self.F)
+        self.run_central_difference_test(CentralDifferenceSolver, lumped=True)
