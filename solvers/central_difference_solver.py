@@ -86,6 +86,9 @@ class CentralDifferenceSolver(Solver):
             M = self.lump_method.apply(M)
             C = self.lump_method.apply(C)
             inv_M = 1 / M
+            M = np.diagflat(M)
+            C = np.diagflat(C)
+            inv_M = np.diagflat(inv_M)
         else:
             if self._is_sparse_calculation:
                 inv_M = sp_inv(M).tocsc()
@@ -95,16 +98,13 @@ class CentralDifferenceSolver(Solver):
         # get initial displacement, velocity, acceleration
         u = self.u0
         v = self.v0
-        if self.is_lumped:
-            a = np.diagflat(inv_M).dot(self.F - K.dot(u) - np.diagflat(C).dot(v))
-        else:
-            a = inv_M.dot(self.F - K.dot(u) - C.dot(v))
+        a = inv_M.dot(self.F - K.dot(u) - C.dot(v))
         u_prev = u - t_step * v + 1 / 2 * t_step ** 2 * a
 
         # Effective mass matrix
         M_till = 1 / t_step ** 2 * M + 1 / (2 * t_step) * C
         if self.is_lumped:
-            inv_M_till = 1 / M_till
+            inv_M_till = np.diagflat(1 / np.diag(M_till))
         else:
             if self._is_sparse_calculation:
                 inv_M_till = sp_inv(M_till).tocsc()
@@ -130,13 +130,11 @@ class CentralDifferenceSolver(Solver):
 
             # calculate displacement at new time step
             if self.is_lumped:
-                internal_force_part_1 = np.array(K - (2 / t_step**2) * np.diagflat(M)).dot(u)
-                internal_force_part_2 = (1 / t_step**2 * np.diagflat(M) - 1 / (2 * t_step) * np.diagflat(C)).dot(u_prev)
-                u_new = np.diagflat(inv_M_till).dot(force - internal_force_part_1 - internal_force_part_2)
+                internal_force_part_1 = np.squeeze(np.asarray((K - (2 / t_step**2) * M).dot(u)))
             else:
                 internal_force_part_1 = (K - 2 / t_step**2 * M).dot(u)
-                internal_force_part_2 = (1 / t_step**2 * M - 1 / (2 * t_step) * C).dot(u_prev)
-                u_new = inv_M_till.dot(force - internal_force_part_1 - internal_force_part_2)
+            internal_force_part_2 = (1 / t_step**2 * M - 1 / (2 * t_step) * C).dot(u_prev)
+            u_new = inv_M_till.dot(force - internal_force_part_1 - internal_force_part_2)
 
             # calculate velocity and acceleration at current time step
             v = 1 / (2 * t_step) * (-u_prev + u_new)
