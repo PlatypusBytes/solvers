@@ -34,26 +34,6 @@ class CentralDifferenceSolver(Solver):
             raise ValueError("Lumping method must be of type LumpingMethod")
         self.lump_method = lumping_method
 
-    def calculate_force(self, u, t):
-        """
-        Calculate external force if a load function is given. If no load function is given, force is taken from current
-        load vector
-
-        :param u: displacement at time t
-        :param t: current time step
-        :return: external force vector
-        """
-
-        # calculates force with custom load function
-        self.update_rhs_at_non_linear_iteration(t, u=u)
-
-        force = self.F
-        # Convert force vector to a 1d numpy array
-        if issparse(force):
-            force = force.toarray()[:, 0]
-
-        return force
-
     def _create_diagonal_matrix(self, diag_elements, sparse=False):
         """
         Create diagonal matrix
@@ -65,6 +45,29 @@ class CentralDifferenceSolver(Solver):
         if sparse:
             return diags(diag_elements, format='csc')
         return np.diagflat(diag_elements)
+
+    def update_force(self, u, F_previous, t):
+        """
+        Updates the external force vector at time t
+
+        :param u: displacement vector at time t
+        :param F_previous: Force vector at previous time step
+        :param t:  current time step index
+        :return:
+        """
+
+        # calculates force with custom load function
+        self.update_rhs_at_non_linear_iteration(t,u=u)
+
+        force = self.F
+
+        # calculate force increment with respect to the previous time step
+        d_force = force - F_previous
+
+        # copy force vector such that force vector data at each time step is maintained
+        F_total = np.copy(force)
+
+        return d_force, F_total
 
     def calculate(self, M, C, K, F, t_start_idx, t_end_idx):
         """
@@ -140,12 +143,17 @@ class CentralDifferenceSolver(Solver):
         # define progress bar
         pbar = tqdm(total=(t_end_idx - t_start_idx), unit_scale=True, unit_divisor=1000, unit="steps")
 
+        # initialise Force from load function
+        force = np.copy(self.F)
+
         for t in range(t_start_idx + 1, t_end_idx + 1):
             # update progress bar
             pbar.update(1)
 
-            # Calculate predicted external force vector
-            force = self.calculate_force(u, t)
+            self.update_rhs_at_time_step(t, u=u)
+
+            # update external force
+            _, force = self.update_force(u, force, t)
 
             # calculate displacement at new time step
             if self.is_lumped:
