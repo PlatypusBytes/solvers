@@ -1,6 +1,7 @@
 import numpy as np
 from numpy.linalg import inv
 from scipy.sparse.linalg import inv as sp_inv
+from scipy.sparse.linalg import spsolve
 from scipy.sparse import issparse, diags
 from tqdm import tqdm
 
@@ -122,7 +123,11 @@ class CentralDifferenceSolver(Solver):
         # get initial displacement, velocity, acceleration
         u = self.u0
         v = self.v0
-        a = inv_M.dot(self.F - K.dot(u) - C.dot(v))
+        if self.is_lumped:
+            temp = self.F - K.dot(u) - (C_diag * v)
+            a = inv_M_diag * temp
+        else:
+            a = inv_M.dot(self.F - K.dot(u) - C.dot(v))
         u_prev = u - t_step * v + 1 / 2 * t_step ** 2 * a
 
         output_time_idx = np.where(self.output_time_indices == t_start_idx)[0][0]
