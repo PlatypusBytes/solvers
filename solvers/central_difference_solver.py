@@ -102,10 +102,10 @@ class CentralDifferenceSolver(Solver):
 
             # Effective mass matrix
             M_till_diag = 1. / t_step ** 2 * M_diag + 1 / (2 * t_step) * C_diag
-            inv_M_till = self._create_diagonal_matrix(1 / M_till_diag, sparse=self._is_sparse_calculation)
+            inv_M_till = 1 / M_till_diag
             # constant matrices
             K_part = K - (2 / t_step ** 2) * M
-            M_part = 1 / t_step ** 2 * M - 1 / (2 * t_step) * C
+            M_part = M_till_diag
         else:
             # Effective mass matrix
             M_till = 1. / t_step ** 2 * M + 1 / (2 * t_step) * C
@@ -143,11 +143,15 @@ class CentralDifferenceSolver(Solver):
             force = self.calculate_force(u, t)
 
             # calculate displacement at new time step
-            internal_force_part_1 = K_part.dot(u)
-            internal_force_part_2 = M_part.dot(u_prev)
             if self.is_lumped:
-                internal_force_part_1 = np.squeeze(np.asarray(internal_force_part_1))
-            u_new = inv_M_till.dot(force - internal_force_part_1 - internal_force_part_2)
+                internal_force_part_1 = K_part.dot(u)
+                internal_force_part_2 = M_part * u_prev
+                force_term = force - internal_force_part_1 - internal_force_part_2
+                u_new = force_term * inv_M_till
+            else:
+                internal_force_part_1 = K_part.dot(u)
+                internal_force_part_2 = M_part.dot(u_prev)
+                u_new = inv_M_till.dot(force - internal_force_part_1 - internal_force_part_2)
 
             # calculate velocity and acceleration at current time step
             v = 1 / (2 * t_step) * (-u_prev + u_new)
