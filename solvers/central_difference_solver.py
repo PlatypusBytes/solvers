@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.linalg import inv
 from scipy.sparse.linalg import inv as sp_inv
-from scipy.sparse import issparse
+from scipy.sparse import issparse, diags
 from tqdm import tqdm
 
 from solvers.base_solver import Solver
@@ -53,6 +53,18 @@ class CentralDifferenceSolver(Solver):
 
         return force
 
+    def _create_diagonal_matrix(self, diag_elements, sparse=False):
+        """
+        Create diagonal matrix
+
+        :param diag_elements: diagonal elements
+        :param sparse: if True, return sparse matrix
+        :return: diagonal matrix
+        """
+        if sparse:
+            return diags(diag_elements, format='csc')
+        return np.diagflat(diag_elements)
+
     def calculate(self, M, C, K, F, t_start_idx, t_end_idx):
         """
         Perform calculation with the explicit central difference solver.
@@ -63,11 +75,9 @@ class CentralDifferenceSolver(Solver):
         :param F: External force matrix
         :param t_start_idx: time index of starting time for the analysis
         :param t_end_idx: time index of end time for the analysis
-        :return:
         """
 
         self.initialise_stage(F)
-
         self.update_output_arrays(t_start_idx, t_end_idx)
         # validate input
         self.validate_input(t_start_idx, t_end_idx)
@@ -83,33 +93,37 @@ class CentralDifferenceSolver(Solver):
         M, C, K = self.check_for_sparse(M, C, K)
 
         if self.is_lumped:
-            M = self.lump_method.apply(M)
-            C = self.lump_method.apply(C)
-            inv_M = 1 / M
-            M = np.diagflat(M)
-            C = np.diagflat(C)
-            inv_M = np.diagflat(inv_M)
+            M_diag = self.lump_method.apply(M)
+            C_diag = self.lump_method.apply(C)
+            inv_M_diag = 1 / M_diag
+            M = self._create_diagonal_matrix(M_diag, sparse=self._is_sparse_calculation)
+            C = self._create_diagonal_matrix(C_diag, sparse=self._is_sparse_calculation)
+            inv_M = self._create_diagonal_matrix(inv_M_diag, sparse=self._is_sparse_calculation)
+
+            # Effective mass matrix
+            M_till_diag = 1. / t_step ** 2 * M_diag + 1 / (2 * t_step) * C_diag
+            inv_M_till = self._create_diagonal_matrix(1 / M_till_diag, sparse=self._is_sparse_calculation)
+            # constant matrices
+            K_part = K - (2 / t_step ** 2) * M
+            M_part = 1 / t_step ** 2 * M - 1 / (2 * t_step) * C
         else:
+            # Effective mass matrix
+            M_till = 1. / t_step ** 2 * M + 1 / (2 * t_step) * C
             if self._is_sparse_calculation:
                 inv_M = sp_inv(M).tocsc()
+                inv_M_till = sp_inv(M_till).tocsc()
             else:
                 inv_M = inv(M)
+                inv_M_till = inv(M_till)
+            # constant matrices
+            K_part = K - (2 / t_step ** 2) * M
+            M_part = 1 / t_step ** 2 * M - 1 / (2 * t_step) * C
 
         # get initial displacement, velocity, acceleration
         u = self.u0
         v = self.v0
         a = inv_M.dot(self.F - K.dot(u) - C.dot(v))
         u_prev = u - t_step * v + 1 / 2 * t_step ** 2 * a
-
-        # Effective mass matrix
-        M_till = 1 / t_step ** 2 * M + 1 / (2 * t_step) * C
-        if self.is_lumped:
-            inv_M_till = np.diagflat(1 / np.diag(M_till))
-        else:
-            if self._is_sparse_calculation:
-                inv_M_till = sp_inv(M_till).tocsc()
-            else:
-                inv_M_till = inv(M_till)
 
         output_time_idx = np.where(self.output_time_indices == t_start_idx)[0][0]
         t2 = output_time_idx + 1
@@ -129,11 +143,10 @@ class CentralDifferenceSolver(Solver):
             force = self.calculate_force(u, t)
 
             # calculate displacement at new time step
+            internal_force_part_1 = K_part.dot(u)
+            internal_force_part_2 = M_part.dot(u_prev)
             if self.is_lumped:
-                internal_force_part_1 = np.squeeze(np.asarray((K - (2 / t_step**2) * M).dot(u)))
-            else:
-                internal_force_part_1 = (K - 2 / t_step**2 * M).dot(u)
-            internal_force_part_2 = (1 / t_step**2 * M - 1 / (2 * t_step) * C).dot(u_prev)
+                internal_force_part_1 = np.squeeze(np.asarray(internal_force_part_1))
             u_new = inv_M_till.dot(force - internal_force_part_1 - internal_force_part_2)
 
             # calculate velocity and acceleration at current time step
@@ -152,8 +165,8 @@ class CentralDifferenceSolver(Solver):
                 t2 += 1
 
             # set vectors for next time step
-            u_prev = np.copy(u)
-            u = np.copy(u_new)
+            u_prev = u
+            u = u_new
 
         # close the progress bar
         pbar.close()
