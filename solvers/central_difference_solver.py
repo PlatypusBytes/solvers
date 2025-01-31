@@ -109,7 +109,7 @@ class CentralDifferenceSolver(Solver):
             inv_M_till = 1 / M_till_diag
             # constant matrices
             K_part = K - (2 / t_step ** 2) * M
-            M_part = M_till_diag
+            M_part = 1. / t_step ** 2 * M_diag - 1 / (2 * t_step) * C_diag
         else:
             # Effective mass matrix
             M_till = 1. / t_step ** 2 * M + 1 / (2 * t_step) * C
