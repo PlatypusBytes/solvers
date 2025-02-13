@@ -8,14 +8,14 @@ from solvers.base_solver import Solver
 from solvers.utils import LumpingMethod
 
 
-class CentralDifferenceSolver(Solver):
+class BatheSolver(Solver):
     """
-    Central Difference Solver class. This class contains the explicit solver according to :cite:p: `Bathe_1996`.
-    This class bases from :class:`~rose.model.solver.Solver`.
+    Bathe Solver class. This class contains the explicit solver according to :cite:p: `Noh_Bathe_2013`.
 
     :Attributes:
         - :self.is_lumped: bool which is true if mass matrix should be lumped and damping matrix is to be neglected
         - :self.lump_method: method of lumping the mass matrix
+        - :self.p: Bathe parameter for the integration
     """
 
     def __init__(self, lumped=True, lumping_method=LumpingMethod.RowSum):
@@ -26,12 +26,13 @@ class CentralDifferenceSolver(Solver):
         :param lumping_method: method of lumping the mass matrix: default "RowSum"
         """
 
-        super(CentralDifferenceSolver, self).__init__()
+        super(BatheSolver, self).__init__()
 
         self.is_lumped = lumped
         if not isinstance(lumping_method, LumpingMethod):
             raise ValueError("Lumping method must be of type LumpingMethod")
         self.lump_method = lumping_method
+        self.p = 0.54  # Bathe parameter
 
     def _create_diagonal_matrix(self, diag_elements, sparse=False):
         """
@@ -102,25 +103,25 @@ class CentralDifferenceSolver(Solver):
             M = self._create_diagonal_matrix(M_diag, sparse=self._is_sparse_calculation)
             C = self._create_diagonal_matrix(C_diag, sparse=self._is_sparse_calculation)
             inv_M = self._create_diagonal_matrix(inv_M_diag, sparse=self._is_sparse_calculation)
-
-            # Effective mass matrix
-            M_till_diag = 1. / t_step ** 2 * M_diag + 1 / (2 * t_step) * C_diag
-            inv_M_till = 1 / M_till_diag
-            # constant matrices
-            K_part = K - (2 / t_step ** 2) * M
-            M_part = 1. / t_step ** 2 * M_diag - 1 / (2 * t_step) * C_diag
         else:
             # Effective mass matrix
-            M_till = 1. / t_step ** 2 * M + 1 / (2 * t_step) * C
             if self._is_sparse_calculation:
                 inv_M = sp_inv(M).tocsc()
-                inv_M_till = sp_inv(M_till).tocsc()
             else:
                 inv_M = inv(M)
-                inv_M_till = inv(M_till)
-            # constant matrices
-            K_part = K - (2 / t_step ** 2) * M
-            M_part = 1 / t_step ** 2 * M - 1 / (2 * t_step) * C
+
+        # compute constants
+        q1 = (1 - 2 * self.p) / (2 * self.p * (1 - self.p))
+        q2 = 1 / 2 - self.p * q1
+        q0 = -q1 - q2 + 1 / 2
+        a0 = self.p * t_step
+        a1 = 1 / 2 * (self.p * t_step) ** 2
+        a2 = a0 / 2
+        a3 = (1- self.p) * t_step
+        a4 = 1 / 2 * ((1 - self.p) * t_step) ** 2
+        a5 = q0 * a3
+        a6 = (1/2 + q1) * a3
+        a7 = q2 * a3
 
         # get initial displacement, velocity, acceleration
         u = self.u0
@@ -130,7 +131,6 @@ class CentralDifferenceSolver(Solver):
             a = inv_M_diag * temp
         else:
             a = inv_M.dot(self.F - K.dot(u) - C.dot(v))
-        u_prev = u - t_step * v + 1 / 2 * t_step ** 2 * a
 
         output_time_idx = np.where(self.output_time_indices == t_start_idx)[0][0]
         t2 = output_time_idx + 1
@@ -144,6 +144,7 @@ class CentralDifferenceSolver(Solver):
 
         # initialise Force from load function
         force = np.copy(self.F)
+        force_ini = np.copy(self.F)
 
         for t in range(t_start_idx + 1, t_end_idx + 1):
             # update progress bar
@@ -154,35 +155,30 @@ class CentralDifferenceSolver(Solver):
             # update external force
             _, force = self.update_force(u, force, t)
 
-            # calculate displacement at new time step
-            if self.is_lumped:
-                internal_force_part_1 = K_part.dot(u)
-                internal_force_part_2 = M_part * u_prev
-                force_term = force - internal_force_part_1 - internal_force_part_2
-                u_new = force_term * inv_M_till
-            else:
-                internal_force_part_1 = K_part.dot(u)
-                internal_force_part_2 = M_part.dot(u_prev)
-                u_new = inv_M_till.dot(force - internal_force_part_1 - internal_force_part_2)
+            # first sub-step
+            u_t_p = u + a0 * v + a1 * a
+            force_term = ( 1 - self.p) * force_ini + self.p * force
+            force_term = force_term - K.dot(u_t_p) - C.dot(v + a0 * a)
 
-            # calculate velocity and acceleration at current time step
-            v = 1 / (2 * t_step) * (-u_prev + u_new)
-            a = 1 / t_step**2 * (u_prev - 2 * u + u_new)
+            a_t_p = inv_M * force_term
+            v_t_p = v + a2 * (a + a_t_p)
+
+            # second sub-step
+            u = u_t_p + a3 * v_t_p + a4 * a_t_p
+            force_term = force - K.dot(u) - C.dot(v_t_p + a3 * a_t_p)  # !!!!!!
+            a_next = inv_M * force_term
+            v = v_t_p + a5 * a + a6 * a_t_p + a7 * a_next  # !!!!!!
+            a = a_next
+            force_ini = np.copy(force)
 
             # add to results
             if t == self.output_time_indices[t2]:
                 # a and v are calculated at previous time step
-                self.u[t2, :] = u_new
+                self.u[t2, :] = u
                 self.v[t2, :] = v
                 self.a[t2, :] = a
-
                 self.F_out[t2, :] = np.copy(self.F)
-
                 t2 += 1
-
-            # set vectors for next time step
-            u_prev = u
-            u = u_new
 
         # close the progress bar
         pbar.close()
