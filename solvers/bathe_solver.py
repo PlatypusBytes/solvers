@@ -1,6 +1,7 @@
 import numpy as np
 from numpy.linalg import inv
 from scipy.sparse.linalg import inv as sp_inv
+from scipy.sparse.linalg import spsolve
 from scipy.sparse import diags
 from tqdm import tqdm
 
@@ -102,7 +103,7 @@ class BatheSolver(Solver):
             inv_M_diag = 1 / M_diag
             M = self._create_diagonal_matrix(M_diag, sparse=self._is_sparse_calculation)
             C = self._create_diagonal_matrix(C_diag, sparse=self._is_sparse_calculation)
-            inv_M = self._create_diagonal_matrix(inv_M_diag, sparse=self._is_sparse_calculation)
+            # inv_M = self._create_diagonal_matrix(inv_M_diag, sparse=self._is_sparse_calculation)
         else:
             # Effective mass matrix
             if self._is_sparse_calculation:
@@ -127,7 +128,7 @@ class BatheSolver(Solver):
         u = self.u0
         v = self.v0
         if self.is_lumped:
-            temp = self.F - K.dot(u) - (C_diag * v)
+            temp = self.F - K.dot(u) - C_diag.dot(v)
             a = inv_M_diag * temp
         else:
             a = inv_M.dot(self.F - K.dot(u) - C.dot(v))
@@ -157,17 +158,23 @@ class BatheSolver(Solver):
 
             # first sub-step
             u_t_p = u + a0 * v + a1 * a
-            force_term = ( 1 - self.p) * force_ini + self.p * force
+            force_term = (1 - self.p) * force_ini + self.p * force
             force_term = force_term - K.dot(u_t_p) - C.dot(v + a0 * a)
 
-            a_t_p = inv_M * force_term
+            if self.is_lumped:
+                a_t_p = inv_M_diag * force_term
+            else:
+                a_t_p = inv_M.dot(force_term)
             v_t_p = v + a2 * (a + a_t_p)
 
             # second sub-step
             u = u_t_p + a3 * v_t_p + a4 * a_t_p
-            force_term = force - K.dot(u) - C.dot(v_t_p + a3 * a_t_p)  # !!!!!!
-            a_next = inv_M * force_term
-            v = v_t_p + a5 * a + a6 * a_t_p + a7 * a_next  # !!!!!!
+            force_term = force - K.dot(u) - C.dot(v_t_p + a3 * a_t_p)
+            if self.is_lumped:
+                a_next = inv_M_diag * force_term
+            else:
+                a_next = inv_M.dot(force_term)
+            v = v_t_p + a5 * a + a6 * a_t_p + a7 * a_next
             a = a_next
             force_ini = np.copy(force)
 

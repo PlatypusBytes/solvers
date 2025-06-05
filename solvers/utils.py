@@ -1,4 +1,5 @@
 from enum import Enum
+import numpy as np
 from scipy.sparse import isspmatrix
 
 
@@ -35,9 +36,9 @@ class LumpingMethod(Enum):
         :return: The lumped matrix.
         """
         if isspmatrix(M_consistent):
-            M_lumped = M_consistent.sum(axis=1).A.ravel()
+            M_lumped = np.sum(M_consistent, axis=1).A.ravel()
         else:
-            M_lumped = M_consistent.sum(axis=1)
+            M_lumped = np.sum(M_consistent, axis=1)
         return M_lumped
 
     @staticmethod
