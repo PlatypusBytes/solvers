@@ -1,6 +1,6 @@
 from enum import Enum
 import numpy as np
-from scipy.sparse import isspmatrix
+from scipy.sparse import isspmatrix, diags
 
 
 class LumpingMethod(Enum):
@@ -11,7 +11,6 @@ class LumpingMethod(Enum):
     """
     RowSum = "RowSum"
     DiagonalScaling = "DiagonalScaling"
-    MassProportion = "MassProportion"
 
     def apply(self, M_consistent):
         """
@@ -24,8 +23,6 @@ class LumpingMethod(Enum):
             return self.row_sum(M_consistent)
         if self == LumpingMethod.DiagonalScaling:
             return self.diagonal_scaling(M_consistent)
-        if self == LumpingMethod.MassProportion:
-            return self.hrz(M_consistent)
 
     @staticmethod
     def row_sum(M_consistent):
@@ -33,10 +30,10 @@ class LumpingMethod(Enum):
         Row-sum lumping method: Each diagonal entry is the sum of the corresponding row.
 
         :param M_consistent: The consistent mass matrix.
-        :return: The lumped matrix.
+        :return: The lumped matrix as a 1D array (vector) of diagonal values.
         """
         if isspmatrix(M_consistent):
-            M_lumped = np.sum(M_consistent, axis=1).A.ravel()
+            M_lumped = np.array(M_consistent.sum(axis=1)).ravel()
         else:
             M_lumped = np.sum(M_consistent, axis=1)
         return M_lumped
@@ -53,19 +50,4 @@ class LumpingMethod(Enum):
         diag_sum = M_consistent.diagonal().sum()
         scale_factor = M_total / diag_sum
         M_lumped = M_consistent.diagonal() * scale_factor
-        return M_lumped
-
-    @staticmethod
-    def hrz(M_consistent):
-        """
-        Hinton-Rock-Zienkiewicz (HRZ) lumping: Row-sum with mass conservation scaling.
-
-        :param M_consistent: The consistent matrix.
-        :return: The lumped matrix.
-        """
-        M_total = M_consistent.sum()
-        M_lumped = LumpingMethod.row_sum(M_consistent)
-        lumped_mass_total = M_lumped.sum()
-        scaling_factor = M_total / lumped_mass_total
-        M_lumped *= scaling_factor
         return M_lumped
