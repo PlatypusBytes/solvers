@@ -1,217 +1,233 @@
-import unittest
-
-from solvers.central_difference_solver import CentralDifferenceSolver
-
-from tests.utils import set_matrices_as_sparse, set_matrices_as_np_array
-
+import pytest
 import numpy as np
 from scipy import sparse
 
-class TestCentralDifference(unittest.TestCase):
-    def setUp(self):
-
-        # example from bathe
-        M = [[2, 0], [0, 1]]
-        K = [[6, -2], [-2, 4]]
-        C = [[0, 0], [0, 0]]
-        F = np.zeros((2, 13))
-        F[1, :] = 10
-        self.M = sparse.csc_matrix(np.array(M))
-        self.K = sparse.csc_matrix(np.array(K))
-        self.C = sparse.csc_matrix(np.array(C))
-        self.F = sparse.csc_matrix(np.array(F))
-
-        self.u0 = np.zeros(2)
-        self.v0 = np.zeros(2)
-
-        self.n_steps = 12
-        self.t_step = 0.28
-        self.t_total = self.n_steps * self.t_step
-
-        self.time = np.linspace(
-            0, self.t_total, int(np.ceil((self.t_total - 0) / self.t_step)+1)
-        )
-
-        self.number_eq = 2
-        return
-
-    def run_central_difference_test(self, solver, lumped):
-        res = solver(lumped=lumped)
-
-        res.initialise(self.number_eq, self.time)
-        res.calculate(self.M, self.C, self.K, self.F, 0, self.n_steps)
-        # check solution
-        np.testing.assert_array_almost_equal(
-            np.round(res.u, 2),
-            np.round(
-                np.array(
-                    [
-                        [0, 0],
-                        [0.000, 0.392],
-                        [0.0307, 1.45],
-                        [0.168, 2.83],
-                        [0.487, 4.14],
-                        [1.02, 5.02],
-                        [1.7, 5.26],
-                        [2.4, 4.9],
-                        [2.91, 4.17],
-                        [3.07, 3.37],
-                        [2.77, 2.78],
-                        [2.04, 2.54],
-                        [1.02, 2.60],
-                    ]
-                ),
-                2,
-            ),
-        )
-
-    def test_nd_array_solver_central_difference(self):
-        self.M, self.K, self.C, self.F = set_matrices_as_np_array(self.M, self.K, self.C, self.F)
-        self.run_central_difference_test(CentralDifferenceSolver, lumped=False)
-
-    def test_nd_array_solver_central_difference_lump(self):
-        self.M, self.K, self.C, self.F = set_matrices_as_np_array(self.M, self.K, self.C, self.F)
-        self.run_central_difference_test(CentralDifferenceSolver, lumped=True)
-
-    def test_sparse_solver_central_difference(self):
-        self.M, self.K, self.C, self.F = set_matrices_as_sparse(self.M, self.K, self.C, self.F)
-        self.run_central_difference_test(CentralDifferenceSolver, lumped=False)
-
-    def test_sparse_solver_central_difference_lump(self):
-        self.M, self.K, self.C, self.F = set_matrices_as_sparse(self.M, self.K, self.C, self.F)
-        self.run_central_difference_test(CentralDifferenceSolver, lumped=True)
+from solvers.central_difference_solver import CentralDifferenceSolver
+from tests.utils import set_matrices_as_sparse, set_matrices_as_np_array
 
 
-class TestCentralDifferenceFull(unittest.TestCase):
-    def setUp(self):
+@pytest.fixture
+def central_difference_basic_setup():
+    # example from bathe
+    M = [[2, 0], [0, 1]]
+    K = [[6, -2], [-2, 4]]
+    C = [[0, 0], [0, 0]]
+    F = np.zeros((2, 13))
+    F[1, :] = 10
+    M_mat = sparse.csc_matrix(np.array(M))
+    K_mat = sparse.csc_matrix(np.array(K))
+    C_mat = sparse.csc_matrix(np.array(C))
+    F_mat = sparse.csc_matrix(np.array(F))
 
-        # example from bathe
-        M = [[1, 1], [0.25, 0.75]]
-        K = [[6, -2], [-2, 4]]
-        C = [[0, 0], [0, 0]]
-        F = np.zeros((2, 13))
-        F[1, :] = 10
-        self.M = sparse.csc_matrix(np.array(M))
-        self.K = sparse.csc_matrix(np.array(K))
-        self.C = sparse.csc_matrix(np.array(C))
-        self.F = sparse.csc_matrix(np.array(F))
+    u0 = np.zeros(2)
+    v0 = np.zeros(2)
 
-        self.u0 = np.zeros(2)
-        self.v0 = np.zeros(2)
+    n_steps = 12
+    t_step = 0.28
+    t_total = n_steps * t_step
 
-        self.n_steps = 12
-        self.t_step = 0.28
-        self.t_total = self.n_steps * self.t_step
+    time = np.linspace(0, t_total, int(np.ceil((t_total - 0) / t_step) + 1))
 
-        self.time = np.linspace(
-            0, self.t_total, int(np.ceil((self.t_total - 0) / self.t_step)+1)
-        )
+    number_eq = 2
 
-        self.number_eq = 2
-        return
-
-    def run_central_difference_test(self, solver, lumped):
-        res = solver(lumped=lumped)
-
-        res.initialise(self.number_eq, self.time)
-        res.calculate(self.M, self.C, self.K, self.F, 0, self.n_steps)
-        # check solution
-        np.testing.assert_array_almost_equal(
-            np.round(res.u, 2),
-            np.round(
-                np.array(
-                    [
-                        [0, 0],
-                        [0.000, 0.392],
-                        [0.0307, 1.45],
-                        [0.168, 2.83],
-                        [0.487, 4.14],
-                        [1.02, 5.02],
-                        [1.7, 5.26],
-                        [2.4, 4.9],
-                        [2.91, 4.17],
-                        [3.07, 3.37],
-                        [2.77, 2.78],
-                        [2.04, 2.54],
-                        [1.02, 2.60],
-                    ]
-                ),
-                2,
-            ),
-        )
-
-    def test_nd_array_solver_central_difference_lump(self):
-        self.M, self.K, self.C, self.F = set_matrices_as_np_array(self.M, self.K, self.C, self.F)
-        self.run_central_difference_test(CentralDifferenceSolver, lumped=True)
-
-    def test_sparse_solver_central_difference_lump(self):
-        self.M, self.K, self.C, self.F = set_matrices_as_sparse(self.M, self.K, self.C, self.F)
-        self.run_central_difference_test(CentralDifferenceSolver, lumped=True)
+    return {
+        'M': M_mat, 'K': K_mat, 'C': C_mat, 'F': F_mat,
+        'u0': u0, 'v0': v0, 'n_steps': n_steps, 't_step': t_step,
+        't_total': t_total, 'time': time, 'number_eq': number_eq
+    }
 
 
-class TestCentralDifferenceFullDamping(unittest.TestCase):
-    def setUp(self):
+@pytest.fixture
+def full_matrix_setup():
+    # example from bathe
+    M = [[1, 1], [0.25, 0.75]]
+    K = [[6, -2], [-2, 4]]
+    C = [[0, 0], [0, 0]]
+    F = np.zeros((2, 13))
+    F[1, :] = 10
+    M_mat = sparse.csc_matrix(np.array(M))
+    K_mat = sparse.csc_matrix(np.array(K))
+    C_mat = sparse.csc_matrix(np.array(C))
+    F_mat = sparse.csc_matrix(np.array(F))
 
-        # example from bathe
-        M = [[1, 1], [0.25, 0.75]]
-        K = [[6, -2], [-2, 4]]
-        C = [[0.25, 0.15], [0.15, 0.25]]
-        F = np.zeros((2, 13))
-        F[1, :] = 10
-        self.M = sparse.csc_matrix(np.array(M))
-        self.K = sparse.csc_matrix(np.array(K))
-        self.C = sparse.csc_matrix(np.array(C))
-        self.F = sparse.csc_matrix(np.array(F))
+    u0 = np.zeros(2)
+    v0 = np.zeros(2)
 
-        self.u0 = np.zeros(2)
-        self.v0 = np.zeros(2)
+    n_steps = 12
+    t_step = 0.28
+    t_total = n_steps * t_step
 
-        self.n_steps = 12
-        self.t_step = 0.28
-        self.t_total = self.n_steps * self.t_step
+    time = np.linspace(0, t_total, int(np.ceil((t_total - 0) / t_step) + 1))
 
-        self.time = np.linspace(
-            0, self.t_total, int(np.ceil((self.t_total - 0) / self.t_step)+1)
-        )
+    number_eq = 2
 
-        self.number_eq = 2
-        return
+    return {
+        'M': M_mat, 'K': K_mat, 'C': C_mat, 'F': F_mat,
+        'u0': u0, 'v0': v0, 'n_steps': n_steps, 't_step': t_step,
+        't_total': t_total, 'time': time, 'number_eq': number_eq
+    }
 
-    def run_central_difference_test(self, solver, lumped):
-        res = solver(lumped=lumped)
 
-        res.initialise(self.number_eq, self.time)
-        res.calculate(self.M, self.C, self.K, self.F, 0, self.n_steps)
-        # check solution
-        np.testing.assert_array_almost_equal(
-            np.round(res.u, 2),
-            np.round(
-                np.array(
-                    [
-                        [0, 0],
-                        [0, 0.392],
-                        [0.0299, 1.3684],
-                        [0.1557, 2.5818],
-                        [0.4359, 3.6653],
-                        [0.8807, 4.3525],
-                        [1.4316, 4.5475],
-                        [1.9719, 4.3263],
-                        [2.3615, 3.879 ],
-                        [2.4854, 3.4203],
-                        [2.2948, 3.106 ],
-                        [1.8264, 2.9857],
-                        [1.1933, 3.0052]
-                        ]
-                ),
-                2,
-            ),
-        )
+@pytest.fixture
+def full_matrix_damping_setup():
+    # example from bathe
+    M = [[1, 1], [0.25, 0.75]]
+    K = [[6, -2], [-2, 4]]
+    C = [[0.25, 0.15], [0.15, 0.25]]
+    F = np.zeros((2, 13))
+    F[1, :] = 10
+    M_mat = sparse.csc_matrix(np.array(M))
+    K_mat = sparse.csc_matrix(np.array(K))
+    C_mat = sparse.csc_matrix(np.array(C))
+    F_mat = sparse.csc_matrix(np.array(F))
 
-    def test_nd_array_solver_central_difference_lump(self):
-        self.M, self.K, self.C, self.F = set_matrices_as_np_array(self.M, self.K, self.C, self.F)
-        self.run_central_difference_test(CentralDifferenceSolver, lumped=True)
+    u0 = np.zeros(2)
+    v0 = np.zeros(2)
 
-    def test_sparse_solver_central_difference_lump(self):
-        self.M, self.K, self.C, self.F = set_matrices_as_sparse(self.M, self.K, self.C, self.F)
-        self.run_central_difference_test(CentralDifferenceSolver, lumped=True)
+    n_steps = 12
+    t_step = 0.28
+    t_total = n_steps * t_step
+
+    time = np.linspace(0, t_total, int(np.ceil((t_total - 0) / t_step) + 1))
+
+    number_eq = 2
+
+    return {
+        'M': M_mat, 'K': K_mat, 'C': C_mat, 'F': F_mat,
+        'u0': u0, 'v0': v0, 'n_steps': n_steps, 't_step': t_step,
+        't_total': t_total, 'time': time, 'number_eq': number_eq
+    }
+
+
+def run_central_difference_test(setup_data, solver, lumped):
+    """
+    Helper function to run the central difference solver test with given parameters
+    """
+    res = solver(lumped=lumped)
+
+    res.initialise(setup_data['number_eq'], setup_data['time'])
+    res.calculate(setup_data['M'], setup_data['C'], setup_data['K'],
+                 setup_data['F'], 0, setup_data['n_steps'])
+
+    # check solution
+    expected_results = np.array(
+        [
+            [0, 0],
+            [0.000, 0.392],
+            [0.0307, 1.45],
+            [0.168, 2.83],
+            [0.487, 4.14],
+            [1.02, 5.02],
+            [1.7, 5.26],
+            [2.4, 4.9],
+            [2.91, 4.17],
+            [3.07, 3.37],
+            [2.77, 2.78],
+            [2.04, 2.54],
+            [1.02, 2.60],
+        ]
+    )
+    np.testing.assert_array_almost_equal(
+        np.round(res.u, 2),
+        np.round(expected_results, 2)
+    )
+
+
+def run_central_difference_test_damping(setup_data, solver, lumped):
+    """
+    Helper function to run the central difference solver test with damping
+    """
+    res = solver(lumped=lumped)
+
+    res.initialise(setup_data['number_eq'], setup_data['time'])
+    res.calculate(setup_data['M'], setup_data['C'], setup_data['K'],
+                 setup_data['F'], 0, setup_data['n_steps'])
+
+    # check solution
+    expected_results = np.array(
+        [
+            [0, 0],
+            [0, 0.392],
+            [0.0299, 1.3684],
+            [0.1557, 2.5818],
+            [0.4359, 3.6653],
+            [0.8807, 4.3525],
+            [1.4316, 4.5475],
+            [1.9719, 4.3263],
+            [2.3615, 3.879 ],
+            [2.4854, 3.4203],
+            [2.2948, 3.106 ],
+            [1.8264, 2.9857],
+            [1.1933, 3.0052]
+        ]
+    )
+    np.testing.assert_array_almost_equal(
+        np.round(res.u, 2),
+        np.round(expected_results, 2)
+    )
+
+
+def test_full_solver_central_difference(central_difference_basic_setup):
+    setup_data = central_difference_basic_setup.copy()
+    setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F'] = set_matrices_as_np_array(
+        setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F']
+    )
+    run_central_difference_test(setup_data, CentralDifferenceSolver, lumped=False)
+
+
+def test_full_solver_central_difference_lumped(central_difference_basic_setup):
+    setup_data = central_difference_basic_setup.copy()
+    setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F'] = set_matrices_as_np_array(
+        setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F']
+    )
+    run_central_difference_test(setup_data, CentralDifferenceSolver, lumped=True)
+
+
+def test_sparse_solver_central_difference(central_difference_basic_setup):
+    setup_data = central_difference_basic_setup.copy()
+    setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F'] = set_matrices_as_sparse(
+        setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F']
+    )
+    run_central_difference_test(setup_data, CentralDifferenceSolver, lumped=False)
+
+
+def test_sparse_solver_central_difference_lumped(central_difference_basic_setup):
+    setup_data = central_difference_basic_setup.copy()
+    setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F'] = set_matrices_as_sparse(
+        setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F']
+    )
+    run_central_difference_test(setup_data, CentralDifferenceSolver, lumped=True)
+
+
+# Full matrix tests
+def test_full_solver_central_difference_consistent_lumped(full_matrix_setup):
+    setup_data = full_matrix_setup.copy()
+    setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F'] = set_matrices_as_np_array(
+        setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F']
+    )
+    run_central_difference_test(setup_data, CentralDifferenceSolver, lumped=True)
+
+
+def test_sparse_solver_central_difference_consistent_lumped(full_matrix_setup):
+    setup_data = full_matrix_setup.copy()
+    setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F'] = set_matrices_as_sparse(
+        setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F']
+    )
+    run_central_difference_test(setup_data, CentralDifferenceSolver, lumped=True)
+
+
+def test_full_solver_central_difference_full_damp_lumped(full_matrix_damping_setup):
+    setup_data = full_matrix_damping_setup.copy()
+    setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F'] = set_matrices_as_np_array(
+        setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F']
+    )
+    run_central_difference_test_damping(setup_data, CentralDifferenceSolver, lumped=True)
+
+
+def test_sparse_solver_central_difference_consistent_damp_lump(full_matrix_damping_setup):
+    setup_data = full_matrix_damping_setup.copy()
+    setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F'] = set_matrices_as_sparse(
+        setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F']
+    )
+    run_central_difference_test_damping(setup_data, CentralDifferenceSolver, lumped=True)
 
