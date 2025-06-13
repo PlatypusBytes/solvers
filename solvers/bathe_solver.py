@@ -1,8 +1,6 @@
 import numpy as np
 from numpy.linalg import inv
 from scipy.sparse.linalg import inv as sp_inv
-from scipy.sparse.linalg import spsolve
-from scipy.sparse import diags
 from tqdm import tqdm
 
 from solvers.base_solver import Solver
