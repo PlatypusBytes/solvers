@@ -16,7 +16,7 @@ class BatheSolver(Solver):
     :Attributes:
         - :self.is_lumped: bool which is true if mass matrix should be lumped and damping matrix is to be neglected
         - :self.lump_method: method of lumping the mass matrix
-        - :self.p: Bathe parameter for the integration
+        - :self._p: Bathe parameter for the integration
     """
 
     def __init__(self, lumped=True, lumping_method=LumpingMethod.RowSum):
@@ -33,19 +33,7 @@ class BatheSolver(Solver):
         if not isinstance(lumping_method, LumpingMethod):
             raise ValueError("Lumping method must be of type LumpingMethod")
         self.lump_method = lumping_method
-        self.p = 0.54  # Bathe parameter
-
-    def _create_diagonal_matrix(self, diag_elements, sparse=False):
-        """
-        Create diagonal matrix
-
-        :param diag_elements: diagonal elements
-        :param sparse: if True, return sparse matrix
-        :return: diagonal matrix
-        """
-        if sparse:
-            return diags(diag_elements, format='csc')
-        return np.diagflat(diag_elements)
+        self._p = 0.54  # Bathe parameter
 
     def update_force(self, u, F_previous, t):
         """
@@ -98,38 +86,34 @@ class BatheSolver(Solver):
         M, C, K = self.check_for_sparse(M, C, K)
 
         if self.is_lumped:
+            # Lumping only applies to the mass matrix the damping matrix remain consistent
             M_diag = self.lump_method.apply(M)
-            C_diag = self.lump_method.apply(C)
             inv_M_diag = 1 / M_diag
-            M = self._create_diagonal_matrix(M_diag, sparse=self._is_sparse_calculation)
-            C = self._create_diagonal_matrix(C_diag, sparse=self._is_sparse_calculation)
-            # inv_M = self._create_diagonal_matrix(inv_M_diag, sparse=self._is_sparse_calculation)
         else:
-            # Effective mass matrix
+            # inverse mass matrix
             if self._is_sparse_calculation:
                 inv_M = sp_inv(M).tocsc()
             else:
                 inv_M = inv(M)
 
         # compute constants
-        q1 = (1 - 2 * self.p) / (2 * self.p * (1 - self.p))
-        q2 = 1 / 2 - self.p * q1
+        q1 = (1. - 2 * self._p) / (2 * self._p * (1 - self._p))
+        q2 = 1 / 2 - self._p * q1
         q0 = -q1 - q2 + 1 / 2
-        a0 = self.p * t_step
-        a1 = 1 / 2 * (self.p * t_step) ** 2
+        a0 = self._p * t_step
+        a1 = 1 / 2 * (self._p * t_step) ** 2
         a2 = a0 / 2
-        a3 = (1- self.p) * t_step
-        a4 = 1 / 2 * ((1 - self.p) * t_step) ** 2
+        a3 = (1 - self._p) * t_step
+        a4 = 1 / 2 * ((1 - self._p) * t_step) ** 2
         a5 = q0 * a3
-        a6 = (1/2 + q1) * a3
+        a6 = (1 / 2 + q1) * a3
         a7 = q2 * a3
 
         # get initial displacement, velocity, acceleration
         u = self.u0
         v = self.v0
         if self.is_lumped:
-            temp = self.F - K.dot(u) - C_diag.dot(v)
-            a = inv_M_diag * temp
+            a = inv_M_diag * (self.F - K.dot(u) - C.dot(v))
         else:
             a = inv_M.dot(self.F - K.dot(u) - C.dot(v))
 
@@ -158,7 +142,7 @@ class BatheSolver(Solver):
 
             # first sub-step
             u_t_p = u + a0 * v + a1 * a
-            force_term = (1 - self.p) * force_ini + self.p * force
+            force_term = (1 - self._p) * force_ini + self._p * force
             force_term = force_term - K.dot(u_t_p) - C.dot(v + a0 * a)
 
             if self.is_lumped:
