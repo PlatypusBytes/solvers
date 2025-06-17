@@ -3,6 +3,7 @@ import numpy as np
 from scipy import sparse
 
 from solvers.bathe_solver import BatheSolver
+from solvers.utils import LumpingMethod
 from tests.utils import set_matrices_as_sparse, set_matrices_as_np_array
 
 
@@ -97,11 +98,15 @@ def full_matrix_damping_setup():
     }
 
 
-def run_bathe_test(setup_data, solver, lumped):
+def run_bathe_test(setup_data, lumped):
     """
     Helper function to run the bathe solver test with given parameters
     """
-    res = solver(lumped=lumped)
+    if lumped:
+        lump = LumpingMethod.RowSum
+    else:
+        lump = LumpingMethod.NONE
+    res = BatheSolver(lumping_method=lump)
 
     res.initialise(setup_data['number_eq'], setup_data['time'])
     res.calculate(setup_data['M'], setup_data['C'], setup_data['K'],
@@ -131,11 +136,15 @@ def run_bathe_test(setup_data, solver, lumped):
     )
 
 
-def run_bathe_test_damping(setup_data, solver, lumped):
+def run_bathe_test_damping(setup_data, lumped):
     """
     Helper function to run the bathe solver test with damping
     """
-    res = solver(lumped=lumped)
+    if lumped:
+        lump = LumpingMethod.RowSum
+    else:
+        lump = LumpingMethod.NONE
+    res = BatheSolver(lumping_method=lump)
 
     res.initialise(setup_data['number_eq'], setup_data['time'])
     res.calculate(setup_data['M'], setup_data['C'], setup_data['K'],
@@ -170,7 +179,7 @@ def test_solver_bathe_consistent_matrix(bathe_basic_setup):
     setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F'] = set_matrices_as_np_array(
         setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F']
     )
-    run_bathe_test(setup_data, BatheSolver, lumped=False)
+    run_bathe_test(setup_data, lumped=False)
 
 
 def test_solver_bathe_lumped_matrix(bathe_basic_setup):
@@ -178,7 +187,7 @@ def test_solver_bathe_lumped_matrix(bathe_basic_setup):
     setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F'] = set_matrices_as_np_array(
         setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F']
     )
-    run_bathe_test(setup_data, BatheSolver, lumped=True)
+    run_bathe_test(setup_data, lumped=True)
 
 
 def test_solver_bathe_consistent_matrix_sparse(bathe_basic_setup):
@@ -186,7 +195,7 @@ def test_solver_bathe_consistent_matrix_sparse(bathe_basic_setup):
     setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F'] = set_matrices_as_sparse(
         setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F']
     )
-    run_bathe_test(setup_data, BatheSolver, lumped=False)
+    run_bathe_test(setup_data, lumped=False)
 
 
 def test_solver_bathe_lumped_matrix_sparse(bathe_basic_setup):
@@ -194,7 +203,7 @@ def test_solver_bathe_lumped_matrix_sparse(bathe_basic_setup):
     setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F'] = set_matrices_as_sparse(
         setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F']
     )
-    run_bathe_test(setup_data, BatheSolver, lumped=True)
+    run_bathe_test(setup_data, lumped=True)
 
 
 def test_solver_bathe_lumped_matrix_full(full_matrix_setup):
@@ -202,7 +211,7 @@ def test_solver_bathe_lumped_matrix_full(full_matrix_setup):
     setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F'] = set_matrices_as_np_array(
         setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F']
     )
-    run_bathe_test(setup_data, BatheSolver, lumped=True)
+    run_bathe_test(setup_data, lumped=True)
 
 
 def test_solver_bathe_lumped_matrix_full_sparse(full_matrix_setup):
@@ -210,7 +219,7 @@ def test_solver_bathe_lumped_matrix_full_sparse(full_matrix_setup):
     setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F'] = set_matrices_as_sparse(
         setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F']
     )
-    run_bathe_test(setup_data, BatheSolver, lumped=True)
+    run_bathe_test(setup_data, lumped=True)
 
 
 def test_solver_bathe_lumped_matrix_full_damping(full_matrix_damping_setup):
@@ -218,7 +227,7 @@ def test_solver_bathe_lumped_matrix_full_damping(full_matrix_damping_setup):
     setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F'] = set_matrices_as_np_array(
         setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F']
     )
-    run_bathe_test_damping(setup_data, BatheSolver, lumped=True)
+    run_bathe_test_damping(setup_data, lumped=True)
 
 
 def test_solver_bathe_lumped_matrix_full_sparse_damping(full_matrix_damping_setup):
@@ -226,5 +235,5 @@ def test_solver_bathe_lumped_matrix_full_sparse_damping(full_matrix_damping_setu
     setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F'] = set_matrices_as_sparse(
         setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F']
     )
-    run_bathe_test_damping(setup_data, BatheSolver, lumped=True)
+    run_bathe_test_damping(setup_data, lumped=True)
 

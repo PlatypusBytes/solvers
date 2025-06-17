@@ -12,35 +12,36 @@ class BatheSolver(Solver):
     Bathe Solver class. This class contains the explicit solver according to :cite:p: `Noh_Bathe_2013`.
 
     :Attributes:
-        - :self.is_lumped: bool which is true if mass matrix should be lumped and damping matrix is to be neglected
+        - :self.is_lumped: bool which is true if mass matrix should be lumped
         - :self.lump_method: method of lumping the mass matrix
         - :self._p: Bathe parameter for the integration
     """
 
-    def __init__(self, lumped=True, lumping_method=LumpingMethod.RowSum):
+    def __init__(self, lumping_method=LumpingMethod.RowSum):
         """
-        Initialisation of the Central Difference Solver class.
+        Initialisation of the Bathe Solver class.
 
-        :param lumped: mass matrix lumped: default True
+        Parameters:
         :param lumping_method: method of lumping the mass matrix: default "RowSum"
         """
 
         super(BatheSolver, self).__init__()
 
-        self.is_lumped = lumped
         if not isinstance(lumping_method, LumpingMethod):
             raise ValueError("Lumping method must be of type LumpingMethod")
         self.lump_method = lumping_method
+        self.is_lumped = lumping_method != LumpingMethod.NONE
         self._p = 0.54  # Bathe parameter
 
     def update_force(self, u, F_previous, t):
         """
         Updates the external force vector at time t
 
+        Parameters:
         :param u: displacement vector at time t
         :param F_previous: Force vector at previous time step
         :param t:  current time step index
-        :return:
+        :return: incremental force vector and total force vector
         """
 
         # calculates force with custom load function
@@ -58,8 +59,9 @@ class BatheSolver(Solver):
 
     def calculate(self, M, C, K, F, t_start_idx, t_end_idx):
         """
-        Perform calculation with the explicit central difference solver.
+        Perform calculation with the Bathe solver.
 
+        Parameters:
         :param M: Mass matrix
         :param C: Damping matrix
         :param K: Stiffness matrix

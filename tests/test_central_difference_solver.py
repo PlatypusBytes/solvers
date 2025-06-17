@@ -3,6 +3,7 @@ import numpy as np
 from scipy import sparse
 
 from solvers.central_difference_solver import CentralDifferenceSolver
+from solvers.utils import LumpingMethod
 from tests.utils import set_matrices_as_sparse, set_matrices_as_np_array
 
 
@@ -99,11 +100,15 @@ def full_matrix_damping_setup():
     }
 
 
-def run_central_difference_test(setup_data, solver, lumped):
+def run_central_difference_test(setup_data, lumped):
     """
     Helper function to run the central difference solver test with given parameters
     """
-    res = solver(lumped=lumped)
+    if lumped:
+        lump = LumpingMethod.RowSum
+    else:
+        lump = LumpingMethod.NONE
+    res = CentralDifferenceSolver(lumping_method=lump)
 
     res.initialise(setup_data['number_eq'], setup_data['time'])
     res.calculate(setup_data['M'], setup_data['C'], setup_data['K'],
@@ -133,11 +138,15 @@ def run_central_difference_test(setup_data, solver, lumped):
     )
 
 
-def run_central_difference_test_damping(setup_data, solver, lumped):
+def run_central_difference_test_damping(setup_data, lumped):
     """
     Helper function to run the central difference solver test with damping
     """
-    res = solver(lumped=lumped)
+    if lumped:
+        lump = LumpingMethod.RowSum
+    else:
+        lump = LumpingMethod.NONE
+    res = CentralDifferenceSolver(lumping_method=lump)
 
     res.initialise(setup_data['number_eq'], setup_data['time'])
     res.calculate(setup_data['M'], setup_data['C'], setup_data['K'],
@@ -172,7 +181,7 @@ def test_full_solver_central_difference(central_difference_basic_setup):
     setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F'] = set_matrices_as_np_array(
         setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F']
     )
-    run_central_difference_test(setup_data, CentralDifferenceSolver, lumped=False)
+    run_central_difference_test(setup_data, lumped=False)
 
 
 def test_full_solver_central_difference_lumped(central_difference_basic_setup):
@@ -180,7 +189,7 @@ def test_full_solver_central_difference_lumped(central_difference_basic_setup):
     setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F'] = set_matrices_as_np_array(
         setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F']
     )
-    run_central_difference_test(setup_data, CentralDifferenceSolver, lumped=True)
+    run_central_difference_test(setup_data, lumped=True)
 
 
 def test_sparse_solver_central_difference(central_difference_basic_setup):
@@ -188,7 +197,7 @@ def test_sparse_solver_central_difference(central_difference_basic_setup):
     setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F'] = set_matrices_as_sparse(
         setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F']
     )
-    run_central_difference_test(setup_data, CentralDifferenceSolver, lumped=False)
+    run_central_difference_test(setup_data, lumped=False)
 
 
 def test_sparse_solver_central_difference_lumped(central_difference_basic_setup):
@@ -196,7 +205,7 @@ def test_sparse_solver_central_difference_lumped(central_difference_basic_setup)
     setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F'] = set_matrices_as_sparse(
         setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F']
     )
-    run_central_difference_test(setup_data, CentralDifferenceSolver, lumped=True)
+    run_central_difference_test(setup_data, lumped=True)
 
 
 # Full matrix tests
@@ -205,7 +214,7 @@ def test_full_solver_central_difference_consistent_lumped(full_matrix_setup):
     setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F'] = set_matrices_as_np_array(
         setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F']
     )
-    run_central_difference_test(setup_data, CentralDifferenceSolver, lumped=True)
+    run_central_difference_test(setup_data, lumped=True)
 
 
 def test_sparse_solver_central_difference_consistent_lumped(full_matrix_setup):
@@ -213,7 +222,7 @@ def test_sparse_solver_central_difference_consistent_lumped(full_matrix_setup):
     setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F'] = set_matrices_as_sparse(
         setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F']
     )
-    run_central_difference_test(setup_data, CentralDifferenceSolver, lumped=True)
+    run_central_difference_test(setup_data, lumped=True)
 
 
 def test_full_solver_central_difference_full_damp_lumped(full_matrix_damping_setup):
@@ -221,7 +230,7 @@ def test_full_solver_central_difference_full_damp_lumped(full_matrix_damping_set
     setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F'] = set_matrices_as_np_array(
         setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F']
     )
-    run_central_difference_test_damping(setup_data, CentralDifferenceSolver, lumped=True)
+    run_central_difference_test_damping(setup_data, lumped=True)
 
 
 def test_sparse_solver_central_difference_consistent_damp_lump(full_matrix_damping_setup):
@@ -229,5 +238,5 @@ def test_sparse_solver_central_difference_consistent_damp_lump(full_matrix_dampi
     setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F'] = set_matrices_as_sparse(
         setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F']
     )
-    run_central_difference_test_damping(setup_data, CentralDifferenceSolver, lumped=True)
+    run_central_difference_test_damping(setup_data, lumped=True)
 

@@ -18,25 +18,26 @@ class CentralDifferenceSolver(Solver):
         - :self.lump_method: method of lumping the mass matrix
     """
 
-    def __init__(self, lumped=True, lumping_method=LumpingMethod.RowSum):
+    def __init__(self, lumping_method=LumpingMethod.RowSum):
         """
         Initialisation of the Central Difference Solver class.
 
-        :param lumped: mass matrix lumped: default True
+        Parameters:
         :param lumping_method: method of lumping the mass matrix: default "RowSum"
         """
 
         super(CentralDifferenceSolver, self).__init__()
 
-        self.is_lumped = lumped
         if not isinstance(lumping_method, LumpingMethod):
             raise ValueError("Lumping method must be of type LumpingMethod")
         self.lump_method = lumping_method
+        self.is_lumped = lumping_method != LumpingMethod.NONE
 
     def _create_diagonal_matrix(self, diag_elements, sparse=False):
         """
         Create diagonal matrix
 
+        Parameters:
         :param diag_elements: diagonal elements
         :param sparse: if True, return sparse matrix
         :return: diagonal matrix
@@ -49,10 +50,11 @@ class CentralDifferenceSolver(Solver):
         """
         Updates the external force vector at time t
 
+        Parameters:
         :param u: displacement vector at time t
         :param F_previous: Force vector at previous time step
         :param t:  current time step index
-        :return:
+        :return: incremental force vector and total force vector
         """
 
         # calculates force with custom load function
@@ -72,6 +74,7 @@ class CentralDifferenceSolver(Solver):
         """
         Perform calculation with the explicit central difference solver.
 
+        Parameters:
         :param M: Mass matrix
         :param C: Damping matrix
         :param K: Stiffness matrix

@@ -1,6 +1,6 @@
 from enum import Enum
 import numpy as np
-from scipy.sparse import isspmatrix, diags
+from scipy.sparse import isspmatrix
 
 
 class LumpingMethod(Enum):
@@ -11,6 +11,7 @@ class LumpingMethod(Enum):
     """
     RowSum = "RowSum"
     DiagonalScaling = "DiagonalScaling"
+    NONE = "None"
 
     def apply(self, M_consistent):
         """
@@ -23,6 +24,8 @@ class LumpingMethod(Enum):
             return self.row_sum(M_consistent)
         if self == LumpingMethod.DiagonalScaling:
             return self.diagonal_scaling(M_consistent)
+        if self == LumpingMethod.NONE:
+            return None
 
     @staticmethod
     def row_sum(M_consistent):
