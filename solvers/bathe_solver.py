@@ -128,7 +128,6 @@ class BatheSolver(Solver):
         pbar = tqdm(total=(t_end_idx - t_start_idx), unit_scale=True, unit_divisor=1000, unit="steps")
 
         # initialise Force from load function
-        force = np.copy(self.F)
         force_previous = np.copy(self.F)
 
         for t in range(t_start_idx + 1, t_end_idx + 1):
@@ -138,7 +137,7 @@ class BatheSolver(Solver):
             self.update_rhs_at_time_step(t, u=u)
 
             # update external force
-            _, force = self.update_force(u, force, t)
+            _, force = self.update_force(u, force_previous, t)
 
             # first sub-step
             u_t_p = u + a0 * v + a1 * a
