@@ -129,7 +129,7 @@ class BatheSolver(Solver):
 
         # initialise Force from load function
         force = np.copy(self.F)
-        force_ini = np.copy(self.F)
+        force_previous = np.copy(self.F)
 
         for t in range(t_start_idx + 1, t_end_idx + 1):
             # update progress bar
@@ -142,7 +142,7 @@ class BatheSolver(Solver):
 
             # first sub-step
             u_t_p = u + a0 * v + a1 * a
-            force_term = (1 - self._p) * force_ini + self._p * force
+            force_term = (1 - self._p) * force_previous + self._p * force
             force_term = force_term - K.dot(u_t_p) - C.dot(v + a0 * a)
 
             if self.is_lumped:
@@ -160,7 +160,7 @@ class BatheSolver(Solver):
                 a_next = inv_M.dot(force_term)
             v = v_t_p + a5 * a + a6 * a_t_p + a7 * a_next
             a = a_next
-            force_ini = np.copy(force)
+            force_previous = np.copy(force)
 
             # add to results
             if t == self.output_time_indices[t2]:
