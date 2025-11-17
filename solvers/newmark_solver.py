@@ -157,7 +157,16 @@ class NewmarkImplicitForce(NewmarkSolver):
         K_till = K + C * (gamma / (beta * t_step)) + M * (1 / (beta * t_step ** 2))
 
         if self._is_sparse_calculation:
-            inv_K_till = splu(K_till)
+            pre_conditioner = True
+            if pre_conditioner:
+                diagonal = K_till.diagonal()
+                M_op = LinearOperator(shape=K_till.shape, matvec=lambda v: v / diagonal)
+
+                du, info = cg(K_till, force_ext - force_previous, x0=du, M=M_op, rtol=1e-12, maxiter=10_000)
+                if info > 0:
+                    sys.error(f"ERROR: not converged time step {t}")
+            else:
+                inv_K_till = splu(K_till)
         else:
             inv_K_till = inv(K_till)
 
@@ -288,7 +297,6 @@ class NewmarkExplicit(NewmarkSolver):
         self.validate_input(t_start_idx, t_end_idx)
 
         # calculate time step size
-        # todo correct t_step, as it is not correct, but tests succeed
         t_step = (self.time[t_end_idx] - self.time[t_start_idx]) / (
             (t_end_idx - t_start_idx))
 
@@ -428,7 +436,6 @@ class ModalAnalysisNewmark(NewmarkSolver):
         self.validate_input(t_start_idx, t_end_idx)
 
         # calculate time step size
-        # todo correct t_step, as it is not correct, but tests succeed
         t_step = (self.time[t_end_idx] - self.time[t_start_idx]) / (
             (t_end_idx - t_start_idx))
 
