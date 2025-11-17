@@ -1,10 +1,12 @@
+import sys
 from solvers.base_solver import Solver
 
 import numpy as np
 from numpy.linalg import solve, inv
-from scipy.sparse.linalg import splu
+from scipy.sparse.linalg import splu, spilu, LinearOperator, cg, spsolve
 from tqdm import tqdm
 import logging
+
 
 class NewmarkSolver(Solver):
     """
@@ -155,7 +157,16 @@ class NewmarkImplicitForce(NewmarkSolver):
         K_till = K + C * (gamma / (beta * t_step)) + M * (1 / (beta * t_step ** 2))
 
         if self._is_sparse_calculation:
-            inv_K_till = splu(K_till)
+            pre_conditioner = True
+            if pre_conditioner:
+                diagonal = K_till.diagonal()
+                M_op = LinearOperator(shape=K_till.shape, matvec=lambda v: v / diagonal)
+
+                du, info = cg(K_till, force_ext - force_previous, x0=du, M=M_op, rtol=1e-12, maxiter=10_000)
+                if info > 0:
+                    sys.error(f"ERROR: not converged time step {t}")
+            else:
+                inv_K_till = splu(K_till)
         else:
             inv_K_till = inv(K_till)
 
@@ -398,5 +409,171 @@ class NewmarkExplicit(NewmarkSolver):
         self.f[:, :] = np.transpose(K.dot(np.transpose(self.u)))
         # close the progress bar
         pbar.close()
+
+class ModalAnalysisNewmark(NewmarkSolver):
+
+    def calculate(self, M, C, K, F, t_start_idx, t_end_idx):
+        """
+        Newmark integration scheme.
+        Incremental formulation.
+
+        :param M: Mass matrix
+        :param C: Damping matrix
+        :param K: Stiffness matrix
+        :param F: External force matrix
+        :param t_start_idx: time index of starting time for the stage analysis
+        :param t_end_idx: time index of end time for the stage analysis
+        :return:
+        """
+
+
+        self.initialise_stage(F)
+
+        # check if sparse calculation should be performed
+        M, C, K = self.check_for_sparse(M, C, K)
+
+        self.update_output_arrays(t_start_idx, t_end_idx)
+        # validate solver index
+        self.validate_input(t_start_idx, t_end_idx)
+
+        # calculate time step size
+        # todo correct t_step, as it is not correct, but tests succeed
+        t_step = (self.time[t_end_idx] - self.time[t_start_idx]) / (
+            (t_end_idx - t_start_idx))
+
+        # constants for the Newmark integration
+        beta = self.beta
+        gamma = self.gamma
+
+        # initial force conditions: for computation of initial acceleration
+        self.update_rhs_at_time_step(t_start_idx)
+        self.update_rhs_at_non_linear_iteration(t_start_idx, u=self.u0)
+
+        d_force = self.F
+
+        # initial conditions u, v, a
+        u = self.u0
+        v = self.v0
+        a = self.calculate_initial_acceleration(M, C, K, d_force, u, v)
+
+        # initialise delta velocity
+        dv = np.zeros(len(v))
+
+        output_time_idx = np.where(self.output_time_indices == t_start_idx)[0][0]
+        t2 = output_time_idx + 1
+
+        # add to results initial conditions
+        self.u[output_time_idx, :] = u
+        self.v[output_time_idx, :] = v
+        self.a[output_time_idx, :] = a
+        self.f[output_time_idx, :] = d_force
+
+        self.F_out[output_time_idx, :] = np.copy(self.F)
+
+        # compute the eigenvalues and eigenvectors
+        from scipy.linalg import eigh
+
+        # from scipy.sparse.linalg import eigsh
+        # eigvals, eigvecs = eigsh(A=K, M=M, k=M.shape[0], which='SM')
+
+        # eigen-decomposition (dense) -> ensure use of dense arrays for eigh
+        eigvals, eigvecs = eigh(K.todense(), M.todense())
+        omega_values = np.sqrt(np.maximum(eigvals, 0.0))
+        frequencies = omega_values / (2.0 * np.pi)
+
+        frequencies = omega_values / (2 * np.pi)
+        # mode selection (<= 100 Hz as in your original code)
+        idx_freq = frequencies <= 150
+        frequencies = frequencies[idx_freq]
+        eigen_vectors = np.asarray(eigvecs[:, idx_freq])
+        eigen_vectors = eigvecs[:, idx_freq]
+
+        # modal mass
+        M_modal = np.diag(eigen_vectors.T @ M.todense() @ eigen_vectors)
+        # modal damping
+        C_modal = np.diag(eigen_vectors.T @ C.todense() @ eigen_vectors)
+        # modal stiffness
+        K_modal = np.diag(eigen_vectors.T @ K.todense() @ eigen_vectors)
+
+
+        # combined stiffness matrix
+        K_till = K_modal + C_modal * (gamma / (beta * t_step)) + M_modal * (1 / (beta * t_step ** 2))
+        inv_K_till = 1 / K_till
+
+        # define progress bar
+        pbar = tqdm(
+            total=(t_end_idx - t_start_idx),
+            unit_scale=True,
+            unit_divisor=1000,
+            unit="steps",
+        )
+
+        # initialise Force from load function
+        F_previous = np.copy(self.F)
+
+        # Project initial physical variables into modal coords (1D arrays)
+        qu = eigen_vectors.T @ u
+        qv = eigen_vectors.T @ v
+        qa = eigen_vectors.T @ a
+
+        # iterate for each time step
+        for t in range(t_start_idx + 1, t_end_idx + 1):
+
+            self.update_rhs_at_time_step(t, u=u)
+
+            # update progress bar
+            pbar.update(1)
+
+            # updated mass
+            m_part = qv * (1 / (beta * t_step)) + qa * (1 / (2 * beta))
+            m_part = M_modal * m_part
+            # updated damping
+            c_part = qv * (gamma / beta) + qa * (t_step * (gamma / (2 * beta) - 1))
+            c_part = C_modal * c_part
+
+
+            # update external force
+            d_force, F_previous = self.update_force(u, F_previous, t)
+            d_force_modal = eigen_vectors.T @ d_force
+
+            # external force
+            force_ext = d_force_modal + m_part + c_part
+
+            # solve
+            dqu = inv_K_till * force_ext
+
+            # velocity calculated through Newmark relation
+            dqv = (
+                dqu * (gamma / (beta * t_step))
+                - qv * (gamma / beta)
+                + qa * (t_step * (1 - gamma / (2 * beta)))
+            )
+
+            # acceleration calculated through Newmark relation
+            dqa = (
+                dqu * (1 / (beta * t_step ** 2))
+                - qv * (1 / (beta * t_step))
+                - qa * (1 / (2 * beta))
+            )
+
+            # update variables
+            qu = qu + dqu
+            qv = qv + dqv
+            qa = qa + dqa
+
+            # reconstruct physical displacements, velocities and accelerations
+            u = eigen_vectors @ qu
+
+            # add to results
+            if t == self.output_time_indices[t2]:
+                v = eigen_vectors @ qv
+                a = eigen_vectors @ qa
+
+                self.u[t2, :] = u
+                self.v[t2, :] = v
+                self.a[t2, :] = a
+
+                self.F_out[t2, :] = np.copy(self.F)
+                t2 += 1
 
 
