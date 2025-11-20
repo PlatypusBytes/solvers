@@ -471,17 +471,18 @@ class ModalAnalysisNewmark(NewmarkSolver):
         # compute the eigenvalues and eigenvectors
         from scipy.linalg import eigh
 
-        # from scipy.sparse.linalg import eigsh
-        # eigvals, eigvecs = eigsh(A=K, M=M, k=M.shape[0], which='SM')
+        from scipy.sparse.linalg import eigsh, eigen
+        # compute eigen values # ToDo: improve with this method: - VECTOR ITERATION WITH SHIFT
+        # (e.g. Chopra, Dynamics of structures: theory and applications to earthquake engineering, pg 435)
+        eigvals, eigvecs = eigsh(A=K, M=M, k=M.shape[0]-1, which='SM')
 
-        # eigen-decomposition (dense) -> ensure use of dense arrays for eigh
-        eigvals, eigvecs = eigh(K.todense(), M.todense())
+        # # eigen-decomposition (dense) -> ensure use of dense arrays for eigh
+        # eigvals, eigvecs = eigh(K.todense(), M.todense())
         omega_values = np.sqrt(np.maximum(eigvals, 0.0))
         frequencies = omega_values / (2.0 * np.pi)
 
         frequencies = omega_values / (2 * np.pi)
-        # mode selection (<= 100 Hz as in your original code)
-        idx_freq = frequencies <= 150
+        idx_freq = frequencies <= 100
         frequencies = frequencies[idx_freq]
         eigen_vectors = np.asarray(eigvecs[:, idx_freq])
         eigen_vectors = eigvecs[:, idx_freq]
@@ -492,7 +493,6 @@ class ModalAnalysisNewmark(NewmarkSolver):
         C_modal = np.diag(eigen_vectors.T @ C.todense() @ eigen_vectors)
         # modal stiffness
         K_modal = np.diag(eigen_vectors.T @ K.todense() @ eigen_vectors)
-
 
         # combined stiffness matrix
         K_till = K_modal + C_modal * (gamma / (beta * t_step)) + M_modal * (1 / (beta * t_step ** 2))
@@ -573,5 +573,3 @@ class ModalAnalysisNewmark(NewmarkSolver):
 
                 self.F_out[t2, :] = np.copy(self.F)
                 t2 += 1
-
-
