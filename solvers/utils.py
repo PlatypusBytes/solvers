@@ -16,7 +16,6 @@ class PreConditioner(Enum):
     SSOR = "SSOR"
     ILU = "ILU"
 
-
     def apply(self, A, **kwargs):
         """
         Returns a LinearOperator representing M^{-1}
