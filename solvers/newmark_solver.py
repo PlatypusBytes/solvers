@@ -1,30 +1,36 @@
 import sys
-from solvers.base_solver import Solver
-
+import logging
+from abc import ABC, abstractmethod
 import numpy as np
 from numpy.linalg import solve, inv
 from scipy.sparse.linalg import splu, spilu, LinearOperator, cg, spsolve
 from tqdm import tqdm
-import logging
 
+from solvers.linear_equations_solvers import SolversABC, SparseDirectSolver
+from solvers.preconditioners import PreconditionerABC
+from solvers.base_solver import Force, State
+from solvers.utils import eigen_decomposition
 
-class NewmarkSolver(Solver):
+import numpy.typing as npt
+import scipy.sparse as sp
+from typing import Union, TypeAlias
+
+# Define a custom type alias for readability
+Matrix: TypeAlias = Union[npt.NDArray[np.float64], sp.spmatrix]
+
+class NewmarkSolverABC(ABC):
     """
-    Newmark Solver class. This class contains the implicit incremental Newmark solver. This class bases from
-    :class:`~rose.model.solver.Solver`.
-
-    :Attributes:
-
-       - :self.beta:     Newmark numerical stability parameter
-       - :self.gamma:    Newmark numerical stability parameter
+    Abstract base class for Newmark solvers.
     """
+    @abstractmethod
+    def calculate(self, M: Matrix, C: Matrix, K: Matrix, F: Matrix, t_start_idx: int, t_end_idx: int) -> None:
+        raise NotImplementedError("Subclasses must implement this method")
 
-    def __init__(self):
-        super(NewmarkSolver, self).__init__()
-        self.beta = 0.25
-        self.gamma = 0.5
 
-    def calculate_initial_acceleration(self, m_global, c_global, k_global, force_ini, u, v):
+    def calculate_initial_acceleration(self, m_global: Matrix, c_global: Matrix,
+                                       k_global: Matrix, force_ini: npt.NDArray[np.float64],
+                                       u: npt.NDArray[np.float64],
+                                       v: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
         r"""
         Calculation of the initial conditions - acceleration for the first time-step.
 
@@ -42,57 +48,127 @@ class NewmarkSolver(Solver):
         c_part = c_global.dot(v)
 
         # initial acceleration
-        if self._is_sparse_calculation:
-            a = self.sparse_solver(m_global.astype(float), force_ini - c_part - k_part)
-        else:
-            a = inv(m_global).dot(force_ini - c_part - k_part)
-
+        solver = self.linear_solver()
+        a = solver.solve(m_global, force_ini - c_part - k_part, M=None, cache=False)
         return a
 
-    def update_force(self, u, F_previous, t):
+    @property
+    def u(self):
         """
-        Updates the external force vector at time t
-
-        :param u: displacement vector at time t
-        :param F_previous: Force vector at previous time step
-        :param t:  current time step index
-        :return:
+        Dynamic accessor for displacement results from state.
         """
+        return self.state.u
 
-        # calculates force with custom load function
-        self.update_rhs_at_non_linear_iteration(t,u=u)
-
-        force = self.F
-
-        # calculate force increment with respect to the previous time step
-        d_force = force - F_previous
-
-        # copy force vector such that force vector data at each time step is maintained
-        F_total = np.copy(force)
-
-        return d_force, F_total
-
-    def calculate(self, M, C, K, F, t_start_idx, t_end_idx):
+    @property
+    def v(self):
         """
-        Base calculation function of the Newmark Solver. This function does not do any calculation, instead an error
-        message is returned that any of the inherited Newmark solvers should be used.
-
-        :param M: Mass matrix
-        :param C: Damping matrix
-        :param K: Stiffness matrix
-        :param F: External force matrix
-        :param t_start_idx: time index of starting time for the stage analysis
-        :param t_end_idx: time index of end time for the stage analysis
-        :return:
+        Dynamic accessor for velocity results from state.
         """
-        logging.error("Calculate function of the base NewmarkSolver is called. "
-                      "Use 'NewmarkImplicitForce' or 'NewmarkExplicit' instead")
+        return self.state.v
+
+    @property
+    def a(self):
+        """
+        Dynamic accessor for acceleration results from state.
+        """
+        return self.state.a
+
+    @property
+    def time(self):
+        """
+        Dynamic accessor for time array from state.
+        """
+        return self.state.time
+
+    @property
+    def f(self):
+        """
+        Dynamic accessor for nodal force results from state.
+        """
+        return self.state.f
 
 
-class NewmarkImplicitForce(NewmarkSolver):
+
+# class NewmarkSolver(Solver):
+#     """
+#     Newmark Solver class. This class contains the implicit incremental Newmark solver. This class bases from
+#     :class:`~rose.model.solver.Solver`.
+
+#     :Attributes:
+#        - :self.beta:     Newmark numerical stability parameter
+#        - :self.gamma:    Newmark numerical stability parameter
+#     """
+
+#     def __init__(self):
+#         super(NewmarkSolver, self).__init__()
+#         self.beta = 0.25
+#         self.gamma = 0.5
+
+#     def calculate_initial_acceleration(self, m_global, c_global, k_global, force_ini, u, v):
+#         r"""
+#         Calculation of the initial conditions - acceleration for the first time-step.
+
+#         :param m_global: Global mass matrix
+#         :param c_global: Global damping matrix
+#         :param k_global: Global stiffness matrix
+#         :param force_ini: Initial force
+#         :param u: Initial conditions - displacement
+#         :param v: Initial conditions - velocity
+
+#         :return a: Initial acceleration
+#         """
+
+#         k_part = k_global.dot(u)
+#         c_part = c_global.dot(v)
+
+#         # initial acceleration
+#         a, _ = self.solve_linear_system(m_global, force_ini - c_part - k_part, cache=False)
+#         return a
+
+#     def update_force(self, u, F_previous, t):
+#         """
+#         Updates the external force vector at time t
+
+#         :param u: displacement vector at time t
+#         :param F_previous: Force vector at previous time step
+#         :param t:  current time step index
+#         :return:
+#         """
+
+#         # calculates force with custom load function
+#         self.update_rhs_at_non_linear_iteration(t,u=u)
+
+#         force = self.F
+
+#         # calculate force increment with respect to the previous time step
+#         d_force = force - F_previous
+
+#         # copy force vector such that force vector data at each time step is maintained
+#         F_total = np.copy(force)
+
+#         return d_force, F_total
+
+#     def calculate(self, M, C, K, F, t_start_idx, t_end_idx):
+#         """
+#         Base calculation function of the Newmark Solver. This function does not do any calculation, instead an error
+#         message is returned that any of the inherited Newmark solvers should be used.
+
+#         :param M: Mass matrix
+#         :param C: Damping matrix
+#         :param K: Stiffness matrix
+#         :param F: External force matrix
+#         :param t_start_idx: time index of starting time for the stage analysis
+#         :param t_end_idx: time index of end time for the stage analysis
+#         :return:
+#         """
+#         logging.error("Calculate function of the base NewmarkSolver is called. "
+#                       "Use 'NewmarkImplicitForce' or 'NewmarkExplicit' instead")
+
+
+class NewmarkImplicitForce(NewmarkSolverABC):
 
     def __init__(self):
-        super(NewmarkImplicitForce, self).__init__()
+        # super(NewmarkImplicitForce, self).__init__()
         self.max_iter = 15
         self.tolerance = 1e-5
 
@@ -130,6 +206,7 @@ class NewmarkImplicitForce(NewmarkSolver):
         # initial conditions u, v, a
         u = self.u0
         v = self.v0
+        du = np.zeros(len(u))
 
         self.update_rhs_at_time_step(t_start_idx)
         self.update_rhs_at_non_linear_iteration(t_start_idx,u=u)
@@ -155,20 +232,6 @@ class NewmarkImplicitForce(NewmarkSolver):
 
         # combined stiffness matrix
         K_till = K + C * (gamma / (beta * t_step)) + M * (1 / (beta * t_step ** 2))
-
-        if self._is_sparse_calculation:
-            pre_conditioner = True
-            if pre_conditioner:
-                diagonal = K_till.diagonal()
-                M_op = LinearOperator(shape=K_till.shape, matvec=lambda v: v / diagonal)
-
-                du, info = cg(K_till, force_ext - force_previous, x0=du, M=M_op, rtol=1e-12, maxiter=10_000)
-                if info > 0:
-                    sys.error(f"ERROR: not converged time step {t}")
-            else:
-                inv_K_till = splu(K_till)
-        else:
-            inv_K_till = inv(K_till)
 
         # define progress bar
         pbar = tqdm(
@@ -213,11 +276,28 @@ class NewmarkImplicitForce(NewmarkSolver):
                 # external force
                 force_ext = d_force + m_part + c_part
 
-                # solve
-                if self._is_sparse_calculation:
-                    du = inv_K_till.solve(force_ext - force_previous)
-                else:
-                    du = inv_K_till.dot(force_ext - force_previous)
+                # # solve
+                # if self._is_sparse_calculation:
+                #     pre_conditioner = True
+                #     if pre_conditioner:
+                #         diagonal = K_till.diagonal()
+                #         M_op = LinearOperator(shape=K_till.shape, matvec=lambda v: v / diagonal)
+
+                #         du, info = cg(K_till, force_ext - force_previous, x0=du, M=M_op, rtol=1e-12, maxiter=10_000)
+                #         if info > 0:
+                #             sys.error(f"ERROR: not converged time step {t}")
+                #     else:
+                #         inv_K_till = splu(K_till)
+                # else:
+                #     inv_K_till = inv(K_till)
+                du, info = self.solve_linear_system(K_till, force_ext - force_previous)
+                if info > 0:
+                    sys.error(f"ERROR: not converged time step {t}")
+
+                # if self._is_sparse_calculation:
+                #     du = inv_K_till.solve(force_ext - force_previous)
+                # else:
+                #     du = inv_K_till.dot(force_ext - force_previous)
 
                 # set du for first iteration
                 if i == 0:
@@ -268,36 +348,78 @@ class NewmarkImplicitForce(NewmarkSolver):
 
         # calculate nodal force
         self.f[:, :] = np.transpose(K.dot(np.transpose(self.u)))
+        # clear the cached inverse of K_till for multistage analyses
+        self.cache_inv_K_till = None
         # close the progress bar
         pbar.close()
 
 
-class NewmarkExplicit(NewmarkSolver):
-
-    def calculate(self, M, C, K, F, t_start_idx, t_end_idx):
+class NewmarkExplicit(NewmarkSolverABC):
+    """
+    Explicit Newmark Solver class.
+    """
+    def __init__(self,
+                 force: Force,
+                 state: State,
+                 beta: float = 0.25,
+                 gamma: float = 0.5,
+                 linear_solver: SolversABC = SparseDirectSolver,
+                 preconditioner: PreconditionerABC = None):
         """
-        Newmark integration scheme.
+        Constructor of the Explicit Newmark Solver.
+
+        Parameters
+        ----------
+        :param force: Force class containing the force definitions
+        :param state: State class containing the state
+        :param beta: Newmark numerical stability parameter
+        :param gamma: Newmark numerical stability parameter
+        :param linear_solver: Linear solver to be used (default: SparseDirectSolver)
+        :param preconditioner: Preconditioner to be used (default: None)
+        """
+        self.beta = beta
+        self.gamma = gamma
+        self.linear_solver = linear_solver
+        self.preconditioner = preconditioner
+        self.force = force()
+        self.state = state()
+
+    def initialise(self, number_eq: int, time: np.ndarray) -> None:
+        """
+        Initialise the solver state.
+
+        Parameters
+        ----------
+        :param number_eq: Number of equations
+        :param time: Time array
+        """
+        self.state.initialise(number_eq, time)
+
+    def calculate(self, M: Matrix, C: Matrix, K: Matrix, F: Matrix, t_start_idx: int, t_end_idx: int) -> None:
+        """
+        Explicit newmark integration scheme.
         Incremental formulation.
 
+        Parameters
+        ----------
         :param M: Mass matrix
         :param C: Damping matrix
         :param K: Stiffness matrix
         :param F: External force matrix
         :param t_start_idx: time index of starting time for the stage analysis
         :param t_end_idx: time index of end time for the stage analysis
-        :return:
         """
-        self.initialise_stage(F)
+        self.force.initialise_stage(F)
 
         # check if sparse calculation should be performed
-        M, C, K = self.check_for_sparse(M, C, K)
+        M, C, K = self.state.check_for_sparse(M, C, K)
 
-        self.update_output_arrays(t_start_idx, t_end_idx)
+        self.state.update_output_arrays(t_start_idx, t_end_idx)
         # validate solver index
-        self.validate_input(t_start_idx, t_end_idx)
+        self.state.validate_input(t_start_idx, t_end_idx, self.force.force_matrix)
 
         # calculate time step size
-        t_step = (self.time[t_end_idx] - self.time[t_start_idx]) / (
+        t_step = (self.state.time[t_end_idx] - self.state.time[t_start_idx]) / (
             (t_end_idx - t_start_idx))
 
         # constants for the Newmark integration
@@ -305,38 +427,32 @@ class NewmarkExplicit(NewmarkSolver):
         gamma = self.gamma
 
         # initial force conditions: for computation of initial acceleration
-        self.update_rhs_at_time_step(t_start_idx)
-        self.update_rhs_at_non_linear_iteration(t_start_idx, u=self.u0)
+        self.force.update_rhs_at_time_step(t_start_idx)
+        self.force.update_rhs_at_non_linear_iteration(t_start_idx, u=self.state.u0)
 
-        d_force = self.F
+        d_force = self.force.F
 
         # initial conditions u, v, a
-        u = self.u0
-        v = self.v0
+        u = self.state.u0
+        v = self.state.v0
         a = self.calculate_initial_acceleration(M, C, K, d_force, u, v)
 
         # initialise delta velocity
         dv = np.zeros(len(v))
 
-        output_time_idx = np.where(self.output_time_indices == t_start_idx)[0][0]
+        output_time_idx = np.where(self.state.output_time_indices == t_start_idx)[0][0]
         t2 = output_time_idx + 1
 
         # add to results initial conditions
-        self.u[output_time_idx, :] = u
-        self.v[output_time_idx, :] = v
-        self.a[output_time_idx, :] = a
-        self.f[output_time_idx, :] = d_force
+        self.state.u[output_time_idx, :] = u
+        self.state.v[output_time_idx, :] = v
+        self.state.a[output_time_idx, :] = a
+        self.state.f[output_time_idx, :] = d_force
 
-        self.F_out[output_time_idx, :] = np.copy(self.F)
+        self.state.F_out[output_time_idx, :] = np.copy(self.force.F)
 
         # combined stiffness matrix
         K_till = K + C * (gamma / (beta * t_step)) + M * (1 / (beta * t_step ** 2))
-
-        # calculate inverse K_till
-        if self._is_sparse_calculation:
-            inv_K_till = splu(K_till)
-        else:
-            inv_K_till = inv(K_till)
 
         # define progress bar
         pbar = tqdm(
@@ -347,12 +463,12 @@ class NewmarkExplicit(NewmarkSolver):
         )
 
         # initialise Force from load function
-        F_previous = np.copy(self.F)
+        F_previous = np.copy(self.force.F)
 
         # iterate for each time step
         for t in range(t_start_idx + 1, t_end_idx + 1):
 
-            self.update_rhs_at_time_step(t, u=u)
+            self.force.update_rhs_at_time_step(t, u=u)
 
             # update progress bar
             pbar.update(1)
@@ -365,16 +481,18 @@ class NewmarkExplicit(NewmarkSolver):
             c_part = C.dot(c_part)
 
             # update external force
-            d_force, F_previous = self.update_force(u, F_previous, t)
+            d_force, F_previous = self.force.update_force(u, F_previous, t)
 
             # external force
             force_ext = d_force + m_part + c_part
 
             # solve
-            if self._is_sparse_calculation:
-                du = inv_K_till.solve(force_ext)
+            solver = self.linear_solver()
+            if self.preconditioner is not None:
+                pre_c = self.preconditioner().build(K_till)
             else:
-                du = inv_K_till.dot(force_ext)
+                pre_c = None
+            du = solver.solve(K_till, force_ext, M=pre_c, cache=True)
 
             # velocity calculated through Newmark relation
             dv = (
@@ -396,20 +514,22 @@ class NewmarkExplicit(NewmarkSolver):
             a = a + da
 
             # add to results
-            if t == self.output_time_indices[t2]:
-                self.u[t2, :] = u
-                self.v[t2, :] = v
-                self.a[t2, :] = a
+            if t == self.state.output_time_indices[t2]:
+                self.state.u[t2, :] = u
+                self.state.v[t2, :] = v
+                self.state.a[t2, :] = a
 
-                self.F_out[t2, :] = np.copy(self.F)
+                self.state.F_out[t2, :] = np.copy(self.force.F)
                 t2 += 1
 
         # calculate nodal force
-        self.f[:, :] = np.transpose(K.dot(np.transpose(self.u)))
+        self.state.f[:, :] = np.transpose(K.dot(np.transpose(self.state.u)))
+        # clear the cached inverse of K_till for multistage analyses
+        solver.__invA_cached = None
         # close the progress bar
         pbar.close()
 
-class ModalAnalysisNewmark(NewmarkSolver):
+class ModalAnalysisNewmark(NewmarkSolverABC):
 
     def calculate(self, M, C, K, F, t_start_idx, t_end_idx):
         """
@@ -468,20 +588,11 @@ class ModalAnalysisNewmark(NewmarkSolver):
 
         self.F_out[output_time_idx, :] = np.copy(self.F)
 
-        # compute the eigenvalues and eigenvectors
-        from scipy.linalg import eigh
-
-        from scipy.sparse.linalg import eigsh, eigen
-        # compute eigen values # ToDo: improve with this method: - VECTOR ITERATION WITH SHIFT
-        # (e.g. Chopra, Dynamics of structures: theory and applications to earthquake engineering, pg 435)
-        eigvals, eigvecs = eigsh(A=K, M=M, k=M.shape[0]-1, which='SM')
-
+        eigvals, eigvecs = eigen_decomposition(M, K)
         # # eigen-decomposition (dense) -> ensure use of dense arrays for eigh
         # eigvals, eigvecs = eigh(K.todense(), M.todense())
         omega_values = np.sqrt(np.maximum(eigvals, 0.0))
         frequencies = omega_values / (2.0 * np.pi)
-
-        frequencies = omega_values / (2 * np.pi)
         idx_freq = frequencies <= 100
         frequencies = frequencies[idx_freq]
         eigen_vectors = np.asarray(eigvecs[:, idx_freq])

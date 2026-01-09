@@ -3,127 +3,128 @@ import numpy as np
 from scipy.sparse import isspmatrix
 from scipy.sparse.linalg import LinearOperator
 from scipy.linalg import eigh
-from scipy.sparse.linalg import eigsh, spsolve_triangular, spilu
+from scipy.sparse.linalg import eigsh, spsolve_triangular, spilu, bicgstab, cg, spsolve, gmres
+
 from scipy.sparse import tril, triu
 
 
-class PreConditioner(Enum):
-    """
-    Enum class for the preconditioner types.
-    """
-    NONE = "None"
-    JACOBI = "Jacobi"
-    SSOR = "SSOR"
-    ILU = "ILU"
+# class PreConditioner(Enum):
+#     """
+#     Enum class for the preconditioner types.
+#     """
+#     NONE = None
+#     JACOBI = "Jacobi"
+#     SSOR = "SSOR"
+#     ILU = "ILU"
 
-    def apply(self, A, **kwargs):
-        """
-        Returns a LinearOperator representing M^{-1}
+#     def apply(self, A, **kwargs):
+#         """
+#         Returns a LinearOperator representing M^{-1}
 
-        Parameters
-        ----------
-        A : np.ndarray or scipy.sparse matrix
-            The system matrix to precondition.
-        kwargs : preconditioner-specific parameters
-        """
+#         Parameters
+#         ----------
+#         A : np.ndarray or scipy.sparse matrix
+#             The system matrix to precondition.
+#         kwargs : preconditioner-specific parameters
+#         """
 
-        if self == PreConditioner.NONE:
-            return None
+#         if self == PreConditioner.NONE:
+#             return None
 
-        if self == PreConditioner.JACOBI:
-            return self.__jacobi(A)
+#         if self == PreConditioner.JACOBI:
+#             return self.__jacobi(A)
 
-        if self == PreConditioner.SSOR:
-            return self.__ssor(A, **kwargs)
+#         if self == PreConditioner.SSOR:
+#             return self.__ssor(A, **kwargs)
 
-        if self == PreConditioner.ILU:
-            return self.__ilu(A, **kwargs)
+#         if self == PreConditioner.ILU:
+#             return self.__ilu(A, **kwargs)
 
-        raise ValueError(f"Unknown preconditioner {self}")
+#         raise ValueError(f"Unknown preconditioner {self}")
 
-    def __jacobi(self, A):
-        """
-        Jacobi preconditioner: M = diag(A)
+#     def __jacobi(self, A):
+#         """
+#         Jacobi preconditioner: M = diag(A)
 
-        Parameters
-        ----------
-        :param A: The system matrix.
-        :return: LinearOperator representing M^{-1}
-        """
-        diag = A.diagonal()
-        M_op = LinearOperator(shape=A.shape, matvec=lambda v: v / diag, dtype=A.dtype)
-        return M_op
+#         Parameters
+#         ----------
+#         :param A: The system matrix.
+#         :return: LinearOperator representing M^{-1}
+#         """
+#         diag = A.diagonal()
+#         M_op = LinearOperator(shape=A.shape, matvec=lambda v: v / diag, dtype=A.dtype)
+#         return M_op
 
-    def __ssor(self, A, omega=1.0):
-        """
-        Symmetric Successive Over-Relaxation (SSOR) preconditioner.
+#     def __ssor(self, A, omega=1.0):
+#         """
+#         Symmetric Successive Over-Relaxation (SSOR) preconditioner.
 
-        Parameters
-        ----------
-        :param A: The system matrix.
-        :param omega: Relaxation factor (0 < omega < 2).
-        :return: LinearOperator representing M^{-1}
-        """
+#         Parameters
+#         ----------
+#         :param A: The system matrix.
+#         :param omega: Relaxation factor (0 < omega < 2).
+#         :return: LinearOperator representing M^{-1}
+#         """
 
-        if not (0.0 < omega < 2.0):
-            raise ValueError("SSOR requires 0 < omega < 2")
+#         if not (0.0 < omega < 2.0):
+#             raise ValueError("SSOR requires 0 < omega < 2")
 
-        D = A.diagonal()
+#         D = A.diagonal()
 
-        L = tril(A, k=-1)
-        U = triu(A, k=1)
+#         L = tril(A, k=-1)
+#         U = triu(A, k=1)
 
-        DL = L.copy()
-        DL.setdiag(D / omega)
+#         DL = L.copy()
+#         DL.setdiag(D / omega)
 
-        DU = U.copy()
-        DU.setdiag(D / omega)
+#         DU = U.copy()
+#         DU.setdiag(D / omega)
 
-        M_op = LinearOperator(
-            shape=A.shape,
-            matvec=lambda v: self.__matvec_ssor(v, DL, D, DU),
-            dtype=A.dtype
-            )
-        return M_op
+#         M_op = LinearOperator(
+#             shape=A.shape,
+#             matvec=lambda v: self.__matvec_ssor(v, DL, D, DU),
+#             dtype=A.dtype
+#             )
+#         return M_op
 
-    def __ilu(self, A, drop_tol=1e-4, fill_factor=10):
-        """
-        Incomplete LU (ILU) preconditioner.
+#     def __ilu(self, A, drop_tol=1e-4, fill_factor=10):
+#         """
+#         Incomplete LU (ILU) preconditioner.
 
-        Parameters
-        ----------
-        :param A: The system matrix.
-        :param drop_tol: Drop tolerance for ILU.
-        :param fill_factor: Fill factor for ILU.
-        :return: LinearOperator representing M^{-1}
-        """
+#         Parameters
+#         ----------
+#         :param A: The system matrix.
+#         :param drop_tol: Drop tolerance for ILU.
+#         :param fill_factor: Fill factor for ILU.
+#         :return: LinearOperator representing M^{-1}
+#         """
 
-        ilu = spilu(A.tocsc(), drop_tol=drop_tol, fill_factor=fill_factor)
+#         ilu = spilu(A.tocsc(), drop_tol=drop_tol, fill_factor=fill_factor)
 
-        M_op = LinearOperator(
-            shape=A.shape,
-            matvec = lambda v: ilu.solve(v),
-            dtype=A.dtype
-        )
-        return M_op
+#         M_op = LinearOperator(
+#             shape=A.shape,
+#             matvec = lambda v: ilu.solve(v),
+#             dtype=A.dtype
+#         )
+#         return M_op
 
-    @staticmethod
-    def __matvec_ssor(v, DL, D, DU):
-        """
-        Perform the SSOR preconditioning operation M^{-1} * v.
+#     @staticmethod
+#     def __matvec_ssor(v, DL, D, DU):
+#         """
+#         Perform the SSOR preconditioning operation M^{-1} * v.
 
-        Parameters
-        ----------
-        :param v: The input vector.
-        :param DL: Lower triangular matrix with modified diagonal.
-        :param D: Diagonal entries.
-        :param DU: Upper triangular matrix with modified diagonal.
-        :return: The result of M^{-1} * v.
-        """
-        y = spsolve_triangular(DL, v, lower=True)
-        z = y / D
-        x = spsolve_triangular(DU, z, lower=False)
-        return x
+#         Parameters
+#         ----------
+#         :param v: The input vector.
+#         :param DL: Lower triangular matrix with modified diagonal.
+#         :param D: Diagonal entries.
+#         :param DU: Upper triangular matrix with modified diagonal.
+#         :return: The result of M^{-1} * v.
+#         """
+#         y = spsolve_triangular(DL, v, lower=True)
+#         z = y / D
+#         x = spsolve_triangular(DU, z, lower=False)
+#         return x
 
 class LumpingMethod(Enum):
     """
@@ -176,3 +177,87 @@ class LumpingMethod(Enum):
         scale_factor = M_total / diag_sum
         M_lumped = M_consistent.diagonal() * scale_factor
         return M_lumped
+
+# class Solvers(Enum):
+#     """
+#     Enum class for the solver types.
+#     """
+#     DIRECT = "Direct"
+#     CG = "Conjugate Gradient"
+#     GMRES = "GMRES"
+#     BICGSTAB = "BiCGSTAB"
+
+#     def apply(self):
+#         """
+#         Returns the solver function corresponding to the selected solver type.
+
+#         :return: Solver function.
+#         """
+#         if self == Solvers.DIRECT:
+#             return spsolve
+#         if self == Solvers.CG:
+#             return cg
+#         if self == Solvers.GMRES:
+#             return gmres
+#         if self == Solvers.BICGSTAB:
+#             return bicgstab
+
+#         raise ValueError(f"Unknown solver {self}")
+
+def eigen_decomposition(M, K):
+    """
+    Perform eigen decomposition of a matrix.
+
+    :param M: The mass matrix.
+    :param K: The stiffness matrix.
+    :return: A tuple containing the eigenvalues and eigenvectors.
+    """
+
+    f_max = 50
+    nb_modes = int(M.shape[0] / 10)
+    omega_max = 2 * np.pi * f_max
+    sigma = (1.1 * omega_max) ** 2
+
+    i = 0
+    if isspmatrix(M):
+
+        while True:
+            # eigvals, eigvecs = eigsh(A=K, M=M, k=M.shape[0]-1, which='SM')
+            eigvals, eigvecs = eigsh(A=K, M=M, k=nb_modes, sigma=0, which='LM', mode='normal')
+
+            omega_values = np.sqrt(np.maximum(eigvals, 0.0))
+            frequencies = omega_values / (2.0 * np.pi)
+            idx_freq = frequencies <= f_max
+
+            if frequencies[-1] < f_max:
+                print("Warning: Not enough modes computed to cover the desired frequency range.")
+                nb_modes = min(int(nb_modes * 2), M.shape[0] - 1)
+                i += 1
+            else:
+                print("Done: Enough modes computed to cover the desired frequency range. took", i, "iterations.")
+                break
+
+        frequencies = frequencies[idx_freq]
+        eigen_vectors = np.asarray(eigvecs[:, idx_freq])
+        eigen_vals = eigvals[idx_freq]
+
+
+
+        # X = np.random.rand(n, estimated_modes)
+        # diag_K = K.diagonal()
+        # diag_K_inv = np.where(np.abs(diag_K) > 1e-12, 1.0 / diag_K, 1.0)
+        # M_pre = sparse.diags([diag_K_inv], [0], shape=(n, n))
+        # eigvals, eigvecs = lobpcg(
+        #         A=K,
+        #         X=X,
+        #         B=M,
+        #         M=M_pre,
+        #         largest=False,
+        #         tol=1e-5,
+        #         maxiter=1000
+        #     )
+
+
+    else:
+        eigen_vals, eigen_vectors = eigh(A=K, M=M)
+    return eigen_vals, eigen_vectors
