@@ -55,16 +55,23 @@ class TestNewmarkNew:
 
     @pytest.mark.parametrize("linear_solver", [SparseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver])
     @pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
-    def test_newmark_explicit_sparse(self, setup_module, linear_solver, preconditioner):
+    @pytest.mark.parametrize("newmark", [NewmarkExplicit, NewmarkImplicitForce])
+    def test_newmark_sparse(self, setup_module, linear_solver, preconditioner, newmark):
         """
         Test Newmark explicit solver with different linear solvers and preconditioners using sparse matrices
+
+        Args:
+            setup_module: Fixture setting up matrices
+            linear_solver: Linear solver class
+            preconditioner: Preconditioner class
+            newmark: Newmark solver class
         """
         M, K, C, F, n_steps, time, number_eq = setup_module
         M, K, C, F = set_matrices_as_sparse(M, K, C, F)
 
         prec = preconditioner() if preconditioner is not None else None
 
-        res = NewmarkExplicit(Force(), State(), linear_solver=linear_solver(), preconditioner=prec)
+        res = newmark(Force(), State(), linear_solver=linear_solver(), preconditioner=prec)
         res.initialise(number_eq, time)
         res.calculate(M, C, K, F, 0, n_steps)
         # check solution
@@ -94,14 +101,20 @@ class TestNewmarkNew:
 
 
     @pytest.mark.parametrize("linear_solver", [DenseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver])
-    def test_newmark_explicit_dense(self, setup_module, linear_solver):
+    @pytest.mark.parametrize("newmark", [NewmarkExplicit, NewmarkImplicitForce])
+    def test_newmark_explicit_dense(self, setup_module, linear_solver, newmark):
         """
         Test Newmark explicit solver with different linear solvers using dense matrices
+
+        Args:
+            setup_module: Fixture setting up matrices
+            linear_solver: Linear solver class
+            newmark: Newmark solver class
         """
         M, K, C, F, n_steps, time, number_eq = setup_module
         M, K, C, F = set_matrices_as_np_array(M, K, C, F)
 
-        res = NewmarkExplicit(Force(), State(), linear_solver=linear_solver(), preconditioner=None)
+        res = newmark(Force(), State(), linear_solver=linear_solver(), preconditioner=None)
         res.initialise(number_eq, time)
         res.calculate(M, C, K, F, 0, n_steps)
         # check solution
@@ -131,7 +144,8 @@ class TestNewmarkNew:
 
     @pytest.mark.parametrize("linear_solver", [SparseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver])
     @pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
-    def test_newmark_explicit_two_stages(self, setup_module, linear_solver, preconditioner):
+    @pytest.mark.parametrize("newmark", [NewmarkExplicit, NewmarkImplicitForce])
+    def test_newmark_explicit_two_stages(self, setup_module, linear_solver, preconditioner, newmark):
         """
         Test newmark explicit solver with 2 stages, where the different stages have different time steps
         """
@@ -159,7 +173,7 @@ class TestNewmarkNew:
         prec = preconditioner() if preconditioner is not None else None
 
         # run stages
-        res = NewmarkExplicit(Force(), State(), linear_solver=linear_solver(), preconditioner=prec)
+        res = newmark(Force(), State(), linear_solver=linear_solver(), preconditioner=prec)
         res.initialise(number_eq, time)
         # run first stage
         res.state.update(turning_idxs[0])
@@ -208,210 +222,6 @@ class TestNewmarkNew:
         )
 
 
-
-class TestNewmark(unittest.TestCase):
-    def setUp(self):
-        # newmark settings
-        self.settings = {
-            "beta": 0.25,
-            "gamma": 0.5,
-        }
-
-        # example from bathe
-        M = [[2, 0], [0, 1]]
-        K = [[6, -2], [-2, 4]]
-        C = [[0, 0], [0, 0]]
-        F = np.zeros((2, 13))
-        F[1, :] = 10
-        self.M = sparse.csc_matrix(np.array(M))
-        self.K = sparse.csc_matrix(np.array(K))
-        self.C = sparse.csc_matrix(np.array(C))
-        self.F = sparse.csc_matrix(np.array(F))
-
-        self.u0 = np.zeros(2)
-        self.v0 = np.zeros(2)
-
-        self.n_steps = 12
-        self.t_step = 0.28
-        self.t_total = self.n_steps * self.t_step
-
-        self.time = np.linspace(
-            0, self.t_total, int(np.ceil((self.t_total - 0) / self.t_step)+1)
-        )
-
-        self.number_eq = 2
-        return
-
-
-    def test_a_init(self):
-        force = self.F[:, 0].toarray()[:, 0]
-        # check computation of the acceleration
-        solver = NewmarkExplicit(Force, State, linear_solver=SparseDirectSolver, preconditioner=None)
-        acc = solver.calculate_initial_acceleration(self.M, self.C, self.K, force, self.u0, self.v0)
-        np.testing.assert_array_equal(acc, np.array([0, 10]))
-
-
-    def run_newmark_test(self, solver):
-
-        res = solver(Force, State, linear_solver=SparseDirectSolver, preconditioner=None)
-
-        res.initialise(self.number_eq, self.time)
-        # res.beta = self.settings["beta"]
-        # res.gamma = self.settings["gamma"]
-
-        # res.initialise(self.number_eq, self.time)
-
-        res.calculate(self.M, self.C, self.K, self.F, 0, self.n_steps)
-        # check solution
-        np.testing.assert_array_almost_equal(
-            np.round(res.u, 2),
-            np.round(
-                np.array(
-                    [
-                        [0, 0],
-                        [0.00673, 0.364],
-                        [0.0505, 1.35],
-                        [0.189, 2.68],
-                        [0.485, 4.00],
-                        [0.961, 4.95],
-                        [1.58, 5.34],
-                        [2.23, 5.13],
-                        [2.76, 4.48],
-                        [3.00, 3.64],
-                        [2.85, 2.90],
-                        [2.28, 2.44],
-                        [1.40, 2.31],
-                    ]
-                ),
-                2,
-            ),
-        )
-
-    def test_sparse_solver_newmark_explicit(self):
-        self.M, self.K, self.C, self.F = set_matrices_as_sparse(self.M, self.K, self.C, self.F)
-        # set_matrices_as_sparse()
-        from solvers.utils import PreConditioner
-        solver = NewmarkExplicit
-        solver.preconditioner = PreConditioner.JACOBI
-        self.run_newmark_test(solver)
-
-    def test_sparse_solver_newmark_implicit(self):
-        self.M, self.K, self.C, self.F = set_matrices_as_sparse(self.M, self.K, self.C, self.F)
-        # set_matrices_as_sparse()
-        self.run_newmark_test(NewmarkImplicitForce)
-
-    def test_sparse_solver_newmark_explicit_constant_force_vector(self):
-        self.M, self.K, self.C, self.F = set_matrices_as_sparse(self.M, self.K, self.C, self.F)
-
-        # create force vector
-        self.F = self.F[:,0].toarray()[:,0]
-
-        # run test
-        self.run_newmark_test(NewmarkExplicit)
-
-    def test_sparse_solver_newmark_implicit_constant_force_vector(self):
-        self.M, self.K, self.C, self.F = set_matrices_as_sparse(self.M, self.K, self.C, self.F)
-
-        # create force vector
-        self.F = self.F[:,0].toarray()[:,0]
-
-        # run test
-        self.run_newmark_test(NewmarkImplicitForce)
-
-    def test_np_array_solver_newmark_explicit(self):
-        self.M, self.K, self.C, self.F = set_matrices_as_np_array(self.M, self.K, self.C, self.F)
-        self.run_newmark_test(NewmarkExplicit)
-
-    def test_np_array_solver_newmark_implicit(self):
-        self.M, self.K, self.C, self.F = set_matrices_as_np_array(self.M, self.K, self.C, self.F)
-        self.run_newmark_test(NewmarkImplicitForce)
-
-    def run_test_solver_newmark_two_stages(self, solver):
-        """
-        Test newmark solver with 2 stages, where the different stages have different time steps
-        """
-        res = solver()
-
-        res.beta = self.settings["beta"]
-        res.gamma = self.settings["gamma"]
-
-        new_t_step = 0.5
-        new_n_steps = 5
-        new_t_start = self.time[-1] + new_t_step
-        new_t_total = new_t_step * (new_n_steps - 1) + new_t_start
-        self.time = np.concatenate(
-            (self.time, np.linspace(new_t_start, new_t_total, new_n_steps))
-        )
-
-        diff = np.diff(self.time)
-        turning_idxs = sorted(np.unique(diff.round(decimals=7), return_index=True)[1])
-
-        F = np.zeros((2, len(self.time)))
-        F[1, :] = 10
-        self.F = sparse.csc_matrix(np.array(F))
-
-        res.initialise(self.number_eq, self.time)
-
-        # run stages
-        for i in range(len(turning_idxs) - 1):
-            res.update(turning_idxs[i])
-            res.calculate(
-                self.M, self.C, self.K, self.F, turning_idxs[i], turning_idxs[i + 1]
-            )
-        res.update(turning_idxs[-1])
-        res.calculate(
-            self.M, self.C, self.K, self.F, turning_idxs[-1], len(self.time) - 1
-        )
-
-        # check solution stage 1
-        np.testing.assert_array_almost_equal(
-            np.round(res.u[0:13, :], 2),
-            np.round(
-                np.array(
-                    [
-                        [0, 0],
-                        [0.00673, 0.364],
-                        [0.0505, 1.35],
-                        [0.189, 2.68],
-                        [0.485, 4.00],
-                        [0.961, 4.95],
-                        [1.58, 5.34],
-                        [2.23, 5.13],
-                        [2.76, 4.48],
-                        [3.00, 3.64],
-                        [2.85, 2.90],
-                        [2.28, 2.44],
-                        [1.40, 2.31],
-                    ]
-                ),
-                2,
-            ),
-        )
-
-        # check solution stage 2
-        np.testing.assert_array_almost_equal(
-            np.round(res.u[13:, :], 2),
-            np.round(
-                np.array([[-0.31, 2.56], [-1.28, 2.70], [-0.91, 2.31], [0.52, 1.81], [2.04, 2.08]]),
-                2,
-            ),
-        )
-
-    def test_np_array_solver_newmark_explicit_two_stages(self):
-        self.M, self.K, self.C, self.F = set_matrices_as_np_array(self.M, self.K, self.C, self.F)
-        self.run_test_solver_newmark_two_stages(NewmarkExplicit)
-
-    def test_np_array_solver_newmark_implicit_two_stages(self):
-        self.M, self.K, self.C, self.F = set_matrices_as_np_array(self.M, self.K, self.C, self.F)
-        self.run_test_solver_newmark_two_stages(NewmarkImplicitForce)
-
-    def test_sparse_solver_newmark_explicit_two_stages(self):
-        self.M, self.K, self.C, self.F = set_matrices_as_sparse(self.M, self.K, self.C, self.F)
-        self.run_test_solver_newmark_two_stages(NewmarkExplicit)
-
-    def test_sparse_solver_newmark_implicit_two_stages(self):
-        self.M, self.K, self.C, self.F = set_matrices_as_sparse(self.M, self.K, self.C, self.F)
-        self.run_test_solver_newmark_two_stages(NewmarkImplicitForce)
 
     def test_solver_newmark_static_explicit(self):
         # with damping solution converges to the static one
