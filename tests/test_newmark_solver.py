@@ -53,7 +53,6 @@ class TestNewmarkNew:
         np.testing.assert_array_equal(acc, np.array([0, 10]))
 
 
-
     @pytest.mark.parametrize("linear_solver", [SparseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver])
     @pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
     def test_newmark_explicit_sparse(self, setup_module, linear_solver, preconditioner):
@@ -130,6 +129,83 @@ class TestNewmarkNew:
             ),
         )
 
+    @pytest.mark.parametrize("linear_solver", [SparseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver])
+    @pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
+    def test_newmark_explicit_two_stages(self, setup_module, linear_solver, preconditioner):
+        """
+        Test newmark explicit solver with 2 stages, where the different stages have different time steps
+        """
+
+        M, K, C, F, n_steps, time, number_eq = setup_module
+
+        # redefine time
+        new_t_step = 0.5
+        new_n_steps = 5
+        new_t_start = time[-1] + new_t_step
+        new_t_total = new_t_step * (new_n_steps - 1) + new_t_start
+        time = np.concatenate((time, np.linspace(new_t_start, new_t_total, new_n_steps)))
+
+        # redefine force vector
+        F = np.zeros((2, len(time)))
+        F[1, :] = 10
+
+        # compute turning points
+        diff = np.diff(time)
+        turning_idxs = sorted(np.unique(diff.round(decimals=7), return_index=True)[1])
+
+        # set matrices as sparse
+        M, K, C, F = set_matrices_as_sparse(M, K, C, F)
+
+        prec = preconditioner() if preconditioner is not None else None
+
+        # run stages
+        res = NewmarkExplicit(Force(), State(), linear_solver=linear_solver(), preconditioner=prec)
+        res.initialise(number_eq, time)
+        # run first stage
+        res.state.update(turning_idxs[0])
+        res.calculate(M, C, K, F, turning_idxs[0], turning_idxs[1])
+        # run second stage
+        res.state.update(turning_idxs[1])
+        res.calculate(M, C, K, F, turning_idxs[1], len(time) - 1)
+
+        # check solution stage 1
+        np.testing.assert_array_almost_equal(
+            np.round(res.u[0:13, :], 2),
+            np.round(
+                np.array(
+                    [
+                        [0, 0],
+                        [0.00673, 0.364],
+                        [0.0505, 1.35],
+                        [0.189, 2.68],
+                        [0.485, 4.00],
+                        [0.961, 4.95],
+                        [1.58, 5.34],
+                        [2.23, 5.13],
+                        [2.76, 4.48],
+                        [3.00, 3.64],
+                        [2.85, 2.90],
+                        [2.28, 2.44],
+                        [1.40, 2.31],
+                    ]
+                ),
+                2,
+            ),
+        )
+
+        # check solution stage 2
+        np.testing.assert_array_almost_equal(
+            np.round(res.u[13:, :], 2),
+            np.round(
+                np.array([[-0.31, 2.56],
+                          [-1.28, 2.70],
+                          [-0.91, 2.31],
+                          [0.52, 1.81],
+                          [2.04, 2.08],
+                          ]),
+                2,
+            ),
+        )
 
 
 

@@ -108,6 +108,21 @@ class State:
         self.f[match[0]] = f
         self.F_out[match[0]] = F
 
+    def update(self, t_start_idx: int):
+        """
+        Updates the stage on a certain stage.
+        Initial conditions are retrieved from previously calculated values for
+        displacements and velocities.
+
+        Args:
+            t_start_idx (int): start time index of current stage
+        """
+        output_time_idx = np.where(self.output_time_indices == t_start_idx)[0][0]
+
+        self.u0 = self.u[output_time_idx, :]
+        self.v0 = self.v[output_time_idx, :]
+
+
 class Force:
     """
     Force class. This class forms the base for defining external forces in solvers.
