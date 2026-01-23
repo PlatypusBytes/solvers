@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 import numpy.typing as npt
 import scipy.sparse as sp
+from scipy.linalg import lu_factor, lu_solve
 from scipy.sparse.linalg import bicgstab, cg, spsolve, gmres
 
 from solvers.preconditioners import PreconditionerABC
@@ -18,7 +19,7 @@ class SolversABC(ABC):
               A: Union[npt.NDArray[np.float64], sp.spmatrix],
               b: npt.NDArray[np.float64],
               M: Optional[PreconditionerABC] = None,
-              cache: bool = False) -> npt.NDArray[np.float64]:
+              ) -> npt.NDArray[np.float64]:
         """
         Solve Ax = b
 
@@ -44,18 +45,22 @@ class SolversABC(ABC):
 class DenseDirectSolver(SolversABC):
     """
     Direct dense solver using numpy.linalg.inv
+
+    It stores the LU factorization of A to speed up repeated solves with the same A.
     """
     def __init__(self):
         """
         Initializes the direct dense solver with optional caching.
         """
-        self.__invA_cached = None
+        self._lu = None
+        self._piv = None
+        self._A_id = None
 
     def solve(self,
               A: npt.NDArray[np.float64],
               b: npt.NDArray[np.float64],
               M: Optional[PreconditionerABC] = None,
-              cache: bool = False) -> npt.NDArray[np.float64]:
+              ) -> npt.NDArray[np.float64]:
         """
         Solve A x = b using direct inversion.
 
@@ -79,18 +84,17 @@ class DenseDirectSolver(SolversABC):
         if M is not None:
             warnings.warn("Preconditioner is ignored in DenseDirectSolver")
 
-        if self.__invA_cached is None:
-            self.__invA_cached = np.linalg.inv(A)
-        x = self.__invA_cached.dot(b)
-
-        if cache == False:
-            self.__invA_cached = None
+        # identity-based cache: cache LU factorization if A is the same as last time
+        if id(A) != self._A_id:
+            self._lu, self._piv = lu_factor(A)
+            self._A_id = id(A)
+        x = lu_solve((self._lu, self._piv), b)
         return x
 
 
 class SparseDirectSolver(SolversABC):
     """
-    Conjugate Gradient Solver
+    Sparse Direct Solver using scipy.sparse.linalg.spsolve
     """
     def __init__(self):
         """
@@ -102,7 +106,7 @@ class SparseDirectSolver(SolversABC):
               A: sp.spmatrix,
               b: npt.NDArray[np.float64],
               M: Optional[PreconditionerABC] = None,
-              cache: bool = False) -> npt.NDArray[np.float64]:
+              ) -> npt.NDArray[np.float64]:
         """
         Solve Ax = b using using direct inversion.
 
@@ -143,7 +147,7 @@ class CGSolver(SolversABC):
               A: sp.spmatrix,
               b: npt.NDArray[np.float64],
               M: Optional[PreconditionerABC] = None,
-              cache: bool = False) -> npt.NDArray[np.float64]:
+              ) -> npt.NDArray[np.float64]:
         """
         Solve Ax = b using the Conjugate Gradient method.
 
@@ -184,7 +188,7 @@ class GMRESSolver(SolversABC):
               A: sp.spmatrix,
               b: npt.NDArray[np.float64],
               M: Optional[PreconditionerABC] = None,
-              cache: bool = False) -> npt.NDArray[np.float64]:
+              ) -> npt.NDArray[np.float64]:
         """
         Solve Ax = b using the Generalized Minimal Residual (GMRES) method.
 
@@ -224,7 +228,7 @@ class BICSTABSolver(SolversABC):
               A: sp.spmatrix,
               b: npt.NDArray[np.float64],
               M: Optional[PreconditionerABC] = None,
-              cache: bool = False) -> npt.NDArray[np.float64]:
+              ) -> npt.NDArray[np.float64]:
         """
         Solve Ax = b using the Biconjugate Gradient Stabilized (BiCGSTAB) method.
 

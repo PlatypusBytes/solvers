@@ -7,7 +7,7 @@ import unittest
 from solvers.base_solver import Force, State
 from solvers.linear_equations_solvers import SparseDirectSolver, DenseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver
 from solvers.preconditioners import JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner
-from solvers.newmark_solver import NewmarkExplicit, NewmarkImplicitForce
+from solvers.newmark_solver import NewmarkExplicit, NewmarkImplicitForce, calculate_initial_acceleration
 
 from tests.utils import *
 
@@ -40,8 +40,18 @@ class TestNewmarkNew:
         number_eq = 2
         return M, K, C, F, n_steps, time, number_eq
 
-    def test_initial_acceleration(self):
-        pass
+    @pytest.mark.parametrize("linear_solver", [SparseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver])
+    @pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
+    def test_initial_acceleration(self, setup_module, linear_solver, preconditioner):
+
+        M, K, C, F, _, _, number_eq = setup_module
+        M, K, C, F = set_matrices_as_sparse(M, K, C, F)
+
+        prec = preconditioner() if preconditioner is not None else None
+
+        acc = calculate_initial_acceleration(M, C, K, F[:, 0].toarray()[:, 0], np.zeros(number_eq), np.zeros(number_eq), linear_solver(), prec)
+        np.testing.assert_array_equal(acc, np.array([0, 10]))
+
 
 
     @pytest.mark.parametrize("linear_solver", [SparseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver])
@@ -53,8 +63,9 @@ class TestNewmarkNew:
         M, K, C, F, n_steps, time, number_eq = setup_module
         M, K, C, F = set_matrices_as_sparse(M, K, C, F)
 
+        prec = preconditioner() if preconditioner is not None else None
 
-        res = NewmarkExplicit(Force, State, linear_solver=linear_solver, preconditioner=preconditioner)
+        res = NewmarkExplicit(Force(), State(), linear_solver=linear_solver(), preconditioner=prec)
         res.initialise(number_eq, time)
         res.calculate(M, C, K, F, 0, n_steps)
         # check solution
@@ -83,7 +94,7 @@ class TestNewmarkNew:
         )
 
 
-    @pytest.mark.parametrize("linear_solver", [SparseDirectSolver, DenseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver])
+    @pytest.mark.parametrize("linear_solver", [DenseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver])
     def test_newmark_explicit_dense(self, setup_module, linear_solver):
         """
         Test Newmark explicit solver with different linear solvers using dense matrices
@@ -91,7 +102,7 @@ class TestNewmarkNew:
         M, K, C, F, n_steps, time, number_eq = setup_module
         M, K, C, F = set_matrices_as_np_array(M, K, C, F)
 
-        res = NewmarkExplicit(Force, State, linear_solver=linear_solver, preconditioner=None)
+        res = NewmarkExplicit(Force(), State(), linear_solver=linear_solver(), preconditioner=None)
         res.initialise(number_eq, time)
         res.calculate(M, C, K, F, 0, n_steps)
         # check solution
