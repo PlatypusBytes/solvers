@@ -1,22 +1,13 @@
-import sys
-import logging
 from abc import ABC, abstractmethod
+
 import numpy as np
-from numpy.linalg import solve, inv
-from scipy.sparse.linalg import splu, spilu, LinearOperator, cg, spsolve
+import numpy.typing as npt
 from tqdm import tqdm
 
 from solvers.linear_equations_solvers import SolversABC, SparseDirectSolver
 from solvers.preconditioners import PreconditionerABC
-from solvers.base_solver import Force, State
+from solvers.base_solver import Force, State, Matrix
 from solvers.utils import eigen_decomposition
-
-import numpy.typing as npt
-import scipy.sparse as sp
-from typing import Union, TypeAlias
-
-# Define a custom type alias for readability
-Matrix: TypeAlias = Union[npt.NDArray[np.float64], sp.spmatrix]
 
 
 class NewmarkSolverABC(ABC):
@@ -72,7 +63,7 @@ class NewmarkImplicitForce(NewmarkSolverABC):
                  state: State,
                  beta: float = 0.25,
                  gamma: float = 0.5,
-                 linear_solver: SolversABC = SparseDirectSolver,
+                 linear_solver: SolversABC = SparseDirectSolver(),
                  preconditioner: PreconditionerABC = None,
                  max_iter: int = 15,
                  tolerance: float = 1e-5):

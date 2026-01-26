@@ -1,98 +1,124 @@
 import numpy as np
 from numpy.linalg import inv
+from scipy.sparse import diags, issparse
 from scipy.sparse.linalg import inv as sp_inv
-from scipy.sparse import diags
 from tqdm import tqdm
 
-from solvers.base_solver import Solver
 from solvers.utils import LumpingMethod
+from solvers.base_solver import Force, State, Matrix
+from solvers.preconditioners import PreconditionerABC
+from solvers.linear_equations_solvers import SolversABC, SparseDirectSolver
 
 
-class CentralDifferenceSolver(Solver):
+class CentralDifferenceSolver:
     """
-    Central Difference Solver class. This class contains the explicit solver according to :cite:p: `Bathe_1996`.
-    This class bases from :class:`~rose.model.solver.Solver`.
-
-    :Attributes:
-        - :self.is_lumped: bool which is true if mass matrix should be lumped
-        - :self.lump_method: method of lumping the mass matrix
+    Explicit central difference solver following the :cite:p:`Bathe_1996` formulation.
     """
-
-    def __init__(self, lumping_method=LumpingMethod.RowSum):
+    def __init__(self,
+                 force: Force,
+                 state: State,
+                 linear_solver: SolversABC = SparseDirectSolver(),
+                 preconditioner: PreconditionerABC = None,
+                 lumping_method: LumpingMethod = LumpingMethod.RowSum):
         """
-        Initialisation of the Central Difference Solver class.
+        Constructor of the Central Difference Solver.
 
-        Parameters:
-        :param lumping_method: method of lumping the mass matrix: default "RowSum"
+        Args:
+            force (Force): Force class containing the force definitions
+            state (State): State class containing the state
+            linear_solver (SolversABC): Linear solver to be used (default: SparseDirectSolver)
+            preconditioner (PreconditionerABC): Preconditioner to be used (default: None)
+            lumping_method (LumpingMethod): Lumping method to be used (default: RowSum)
         """
-
-        super(CentralDifferenceSolver, self).__init__()
 
         if not isinstance(lumping_method, LumpingMethod):
             raise ValueError("Lumping method must be of type LumpingMethod")
+
+        self.linear_solver = linear_solver
+        self.preconditioner = preconditioner
+        self.force = force
+        self.state = state
         self.lump_method = lumping_method
         self.is_lumped = lumping_method != LumpingMethod.NONE
+        self._is_sparse_calculation = False
 
-    def _create_diagonal_matrix(self, diag_elements, sparse=False):
+    @property
+    def u(self) -> np.ndarray:
         """
-        Create diagonal matrix
+        Dynamic accessor for displacement results from state.
+        """
+        return self.state.u
 
-        Parameters:
-        :param diag_elements: diagonal elements
-        :param sparse: if True, return sparse matrix
-        :return: diagonal matrix
+    @property
+    def v(self) -> np.ndarray:
         """
+        Dynamic accessor for velocity results from state.
+        """
+        return self.state.v
+
+    @property
+    def a(self) -> np.ndarray:
+        """
+        Dynamic accessor for acceleration results from state.
+        """
+        return self.state.a
+
+    @property
+    def time(self) -> np.ndarray:
+        """
+        Dynamic accessor for time results from state.
+        """
+        return self.state.time
+
+    def initialise(self, number_eq: int, time: np.ndarray):
+        """
+        Initialise solver state for the provided number of equations and time vector.
+
+        Args:
+            number_eq (int): Number of equations
+            time (np.ndarray): Time vector
+        """
+        self.state.initialise(number_eq, time)
+
+    @staticmethod
+    def __create_diagonal_matrix(diag_elements: np.ndarray, sparse: bool = False) -> Matrix:
+        """
+        Create a diagonal matrix with the provided diagonal entries.
+
+        Args:
+            diag_elements (np.ndarray): Diagonal elements of the matrix
+            sparse (bool): Whether to create a sparse matrix (default: False)
+
+        Returns:
+            Matrix: Diagonal matrix with the provided elements
+        """
+
         if sparse:
-            return diags(diag_elements, format='csc')
+            return diags(diag_elements, format="csc")
         return np.diagflat(diag_elements)
 
-    def update_force(self, u, F_previous, t):
-        """
-        Updates the external force vector at time t
-
-        Parameters:
-        :param u: displacement vector at time t
-        :param F_previous: Force vector at previous time step
-        :param t:  current time step index
-        :return: incremental force vector and total force vector
-        """
-
-        # calculates force with custom load function
-        self.update_rhs_at_non_linear_iteration(t,u=u)
-
-        force = self.F
-
-        # calculate force increment with respect to the previous time step
-        d_force = force - F_previous
-
-        # copy force vector such that force vector data at each time step is maintained
-        F_total = np.copy(force)
-
-        return d_force, F_total
-
-    def calculate(self, M, C, K, F, t_start_idx, t_end_idx):
+    def calculate(self, M: Matrix, C: Matrix, K: Matrix, F: Matrix, t_start_idx: int, t_end_idx: int):
         """
         Perform calculation with the explicit central difference solver.
 
-        Parameters:
-        :param M: Mass matrix
-        :param C: Damping matrix
-        :param K: Stiffness matrix
-        :param F: External force matrix
-        :param t_start_idx: time index of starting time for the analysis
-        :param t_end_idx: time index of end time for the analysis
+        Args:
+            M (Matrix): Mass matrix
+            C (Matrix): Damping matrix
+            K (Matrix): Stiffness matrix
+            F (Matrix): External force matrix
+            t_start_idx (int): Start time index
+            t_end_idx (int): End time index
         """
+        self.force.initialise_stage(F)
+        self.force.validate_input(t_start_idx, t_end_idx, self.state.time, self.force.force_matrix)
 
-        self.initialise_stage(F)
-        self.update_output_arrays(t_start_idx, t_end_idx)
-        self.validate_input(t_start_idx, t_end_idx)
+        t_step = (self.state.time[t_end_idx] - self.state.time[t_start_idx]) / (t_end_idx - t_start_idx)
 
-        t_step = (self.time[t_end_idx] - self.time[t_start_idx]) / (t_end_idx - t_start_idx)
+        self.force.update_rhs_at_time_step(t_start_idx)
+        self.force.update_rhs_at_non_linear_iteration(t_start_idx, u=self.state.u0)
 
-        self.update_rhs_at_time_step(t_start_idx)
-        self.update_rhs_at_non_linear_iteration(t_start_idx, u=self.u0)
-
-        M, C, K = self.check_for_sparse(M, C, K)
+        M, C, K = self.state.check_for_sparse(M, C, K)
+        self._is_sparse_calculation = any(issparse(mat) for mat in (M, C, K))
 
         if self.is_lumped:
             # Lump the mass matrix
@@ -100,8 +126,8 @@ class CentralDifferenceSolver(Solver):
             C_diag = self.lump_method.apply(C)
 
             # Create diagonal matrices
-            M = self._create_diagonal_matrix(M_diag, sparse=self._is_sparse_calculation)
-            C = self._create_diagonal_matrix(C_diag, sparse=self._is_sparse_calculation)
+            M = self.__create_diagonal_matrix(M_diag, sparse=self._is_sparse_calculation)
+            C = self.__create_diagonal_matrix(C_diag, sparse=self._is_sparse_calculation)
 
             # Compute effective mass matrix
             M_till_diag = M_diag / (t_step ** 2) + C_diag / (2 * t_step)
@@ -113,63 +139,59 @@ class CentralDifferenceSolver(Solver):
         else:
             # Consistent mass formulation
             M_till = 1. / t_step ** 2 * M + 1 / (2 * t_step) * C
-            if self._is_sparse_calculation:
-                inv_M = sp_inv(M).tocsc()
-                inv_M_till = sp_inv(M_till).tocsc()
-            else:
-                inv_M = inv(M)
-                inv_M_till = inv(M_till)
             K_part = K - (2 / t_step ** 2) * M
             M_part = 1 / t_step ** 2 * M - 1 / (2 * t_step) * C
 
         # Initial conditions
-        u = self.u0
-        v = self.v0
+        u = self.state.u0
+        v = self.state.v0
+
+        # Build preconditioner if provided
+        if self.preconditioner is not None and not self.is_lumped:
+            pre_c = self.preconditioner.build(M)
+        else:
+            pre_c = None
 
         # Calculate initial acceleration
         if self.is_lumped:
-            a = (self.F - K.dot(u) - C_diag * v) / M_diag
+            a = (self.force.F - K.dot(u) - C_diag * v) / M_diag
         else:
-            a = inv_M.dot(self.F - K.dot(u) - C.dot(v))
+            a = self.linear_solver.solve(M, self.force.F - K.dot(u) - C.dot(v), M=pre_c)
 
         u_prev = u - t_step * v + 0.5 * t_step ** 2 * a
 
-        output_time_idx = np.where(self.output_time_indices == t_start_idx)[0][0]
-        t2 = output_time_idx + 1
-
-        self.u[output_time_idx, :] = u
-        self.v[output_time_idx, :] = v
-        self.a[output_time_idx, :] = a
+        self.state.store_step(t_start_idx, u, v, a, K.dot(u), self.force.F)
 
         pbar = tqdm(total=(t_end_idx - t_start_idx), unit_scale=True, unit_divisor=1000, unit="steps")
-        force = np.copy(self.F)
+        force_previous = np.copy(self.force.F)
+
+        # Build preconditioner if provided
+        if self.preconditioner is not None and not self.is_lumped:
+            pre_c = self.preconditioner.build(M_till)
+        else:
+            pre_c = None
 
         for t in range(t_start_idx + 1, t_end_idx + 1):
             pbar.update(1)
-            self.update_rhs_at_time_step(t, u=u)
-            _, force = self.update_force(u, force, t)
+            self.force.update_rhs_at_time_step(t, u=u)
+            _, force_current = self.force.update_force(u, force_previous, t)
 
             if self.is_lumped:
                 internal_force_part_1 = K_part.dot(u)
                 internal_force_part_2 = M_part * u_prev
-                u_new = (force - internal_force_part_1 - internal_force_part_2) * inv_M_till
+                u_new = (force_current - internal_force_part_1 - internal_force_part_2) * inv_M_till
             else:
                 internal_force_part_1 = K_part.dot(u)
                 internal_force_part_2 = M_part.dot(u_prev)
-                u_new = inv_M_till.dot(force - internal_force_part_1 - internal_force_part_2)
-
+                u_new = self.linear_solver.solve(M_till, force_current - internal_force_part_1 - internal_force_part_2, M=pre_c)
             # Calculate velocity and acceleration
             v = (u_new - u_prev) / (2 * t_step)
             a = (u_prev - 2 * u + u_new) / (t_step ** 2)
 
-            if t == self.output_time_indices[t2]:
-                self.u[t2, :] = u_new
-                self.v[t2, :] = v
-                self.a[t2, :] = a
-                self.F_out[t2, :] = np.copy(self.F)
-                t2 += 1
+            self.state.store_step(t, u_new, v, a, K.dot(u_new), self.force.F)
 
             u_prev = u
             u = u_new
+            force_previous = force_current
 
         pbar.close()
