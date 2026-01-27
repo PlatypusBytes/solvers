@@ -3,7 +3,7 @@ import pytest
 import numpy as np
 from scipy.sparse import csr_matrix
 
-from solvers.utils import PreConditioner
+from solvers.preconditioners import JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner
 
 
 @pytest.fixture
@@ -23,24 +23,18 @@ def test_vector():
     return np.array([1., 1., 1.])
 
 
-def test_none_preconditioner(test_matrix):
-    """
-    Test that the NONE preconditioner returns None.
-    """
-    A = test_matrix
-    M = PreConditioner.NONE.apply(A)
-    assert M is None
-
-
 def test_jacobi(test_matrix, test_vector):
     """
     Test that the JACOBI preconditioner correctly applies the inverse of the diagonal.
-    """
 
+    Args:
+        test_matrix: Fixture providing a test matrix
+        test_vector: Fixture providing a test vector
+    """
     A = test_matrix
     v = test_vector
 
-    M = PreConditioner.JACOBI.apply(A)
+    M = JacobiPreconditioner().build(A)
     result = M @ v
 
     diag = np.diag(A.toarray())
@@ -53,11 +47,15 @@ def test_ssor(test_matrix, test_vector):
     SSOR preconditioner test.
 
     This test checks that the SSOR preconditioner matches the expected behavior.
+
+    Args:
+        test_matrix: Fixture providing a test matrix
+        test_vector: Fixture providing a test vector
     """
     A = test_matrix
     v = test_vector
 
-    M = PreConditioner.SSOR.apply(A, omega=1.0)
+    M = SSORPreconditioner(omega=1.0).build(A)
     result = M @ v
 
     # decomposition of M (for verification -> omega = 1)
@@ -76,10 +74,14 @@ def test_ilu(test_matrix):
     Incomplete LU preconditioner test.
 
     This test checks that the ILU preconditioner approximates the inverse of the matrix.
+
+    Args:
+        test_matrix: Fixture providing a test matrix
+        test_vector: Fixture providing a test vector
     """
     A = test_matrix
 
-    M =  PreConditioner.ILU.apply(A, drop_tol=0.0, fill_factor=10)
+    M =  ILUPreconditioner(drop_tol=0.0, fill_factor=10).build(A)
     I_approx = np.column_stack([M @ np.eye(3)[:, i] for i in range(3)])
     A_inv = np.linalg.inv(A.toarray())
     np.testing.assert_allclose(I_approx, A_inv, atol=1e-6)
