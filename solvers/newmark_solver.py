@@ -4,10 +4,10 @@ from tqdm import tqdm
 
 from solvers.linear_equations_solvers import LinearSolversABC, SparseDirectSolver
 from solvers.preconditioners import PreconditionerABC
-from solvers.base_solver import BaseDynamicSolverABC, Force, State, Matrix, calculate_initial_acceleration
+from solvers.base_solver import BaseSolverABC, Force, State, Matrix, calculate_initial_acceleration, TimeIntegrationType
 
 
-class NewmarkImplicitForce(BaseDynamicSolverABC):
+class NewmarkImplicitForce(BaseSolverABC):
     """
     Implicit Newmark Solver class.
     """
@@ -19,7 +19,8 @@ class NewmarkImplicitForce(BaseDynamicSolverABC):
                  linear_solver: LinearSolversABC = SparseDirectSolver(),
                  preconditioner: PreconditionerABC = None,
                  max_iter: int = 15,
-                 tolerance: float = 1e-5):
+                 tolerance: float = 1e-5
+                 ):
         """
         Constructor of the Implicit Newmark Solver.
 
@@ -41,6 +42,7 @@ class NewmarkImplicitForce(BaseDynamicSolverABC):
         self.state = state
         self.max_iter = max_iter
         self.tolerance = tolerance
+        self.type = TimeIntegrationType.DYNAMIC
 
     def initialise(self, number_eq: int, time: npt.NDArray[np.float64]):
         """
@@ -203,7 +205,7 @@ class NewmarkImplicitForce(BaseDynamicSolverABC):
         pbar.close()
 
 
-class NewmarkExplicit(BaseDynamicSolverABC):
+class NewmarkExplicit(BaseSolverABC):
     """
     Explicit Newmark Solver class.
     """
@@ -231,6 +233,7 @@ class NewmarkExplicit(BaseDynamicSolverABC):
         self.preconditioner = preconditioner
         self.force = force
         self.state = state
+        self.type = TimeIntegrationType.DYNAMIC
 
     def initialise(self, number_eq: int, time: npt.NDArray[np.float64]):
         """

@@ -4,10 +4,10 @@ from tqdm import tqdm
 
 from solvers.linear_equations_solvers import LinearSolversABC, SparseDirectSolver
 from solvers.preconditioners import PreconditionerABC
-from solvers.base_solver import BaseDynamicSolverABC, Force, State, Matrix, calculate_initial_acceleration
+from solvers.base_solver import BaseSolverABC, Force, State, Matrix, calculate_initial_acceleration, TimeIntegrationType
 
 
-class ZhaiSolver(BaseDynamicSolverABC):
+class ZhaiSolver(BaseSolverABC):
     """
     Zhai Solver class. This class contains the explicit solver according to :cite:p: `Zhai_1996`.
     """
@@ -34,6 +34,7 @@ class ZhaiSolver(BaseDynamicSolverABC):
         self.phi = 0.5
         self.beta = 1/4
         self.gamma = 1/2
+        self.type = TimeIntegrationType.DYNAMIC
 
     # def calculate_initial_values(self, M, C, K, F, u0, v0):
     #     """

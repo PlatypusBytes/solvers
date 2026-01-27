@@ -5,10 +5,10 @@ from tqdm import tqdm
 from solvers.utils import LumpingMethod
 from solvers.linear_equations_solvers import LinearSolversABC, SparseDirectSolver
 from solvers.preconditioners import PreconditionerABC
-from solvers.base_solver import BaseDynamicSolverABC, Force, State, Matrix, calculate_initial_acceleration
+from solvers.base_solver import BaseSolverABC, Force, State, Matrix, calculate_initial_acceleration, TimeIntegrationType
 
 
-class BatheSolver(BaseDynamicSolverABC):
+class BatheSolver(BaseSolverABC):
     """
     Bathe Solver class.
     This class contains the explicit solver according to :cite:p: `Noh_Bathe_2013`.
@@ -41,6 +41,7 @@ class BatheSolver(BaseDynamicSolverABC):
         self.lump_method = lumping_method
         self.is_lumped = lumping_method != LumpingMethod.NONE
         self._p = 0.54  # Bathe parameter
+        self.type = TimeIntegrationType.DYNAMIC
 
     def initialise(self, number_eq: int, time: npt.NDArray[np.float64]):
         """

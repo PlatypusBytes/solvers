@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Union, Optional, TypeAlias
+from enum import Enum, auto
 
 import numpy as np
 import numpy.typing as npt
@@ -14,22 +15,18 @@ from solvers.preconditioners import PreconditionerABC
 Matrix: TypeAlias = Union[npt.NDArray[np.float64], sp.spmatrix]
 
 
-class BaseStaticSolverABC(ABC):
+class TimeIntegrationType(Enum):
+    STATIC = auto()
+    DYNAMIC = auto()
+
+class BaseSolverABC(ABC):
     """
     Abstract base class for Newmark solvers.
     """
     @abstractmethod
-    def calculate(self, M: Matrix, C: Matrix, K: Matrix, F: Matrix, t_start_idx: int, t_end_idx: int):
+    def calculate(self, *args):
         """
         Abstract method to perform the calculation of the solver.
-
-        Args:
-            M (Matrix): Mass matrix.
-            C (Matrix): Damping matrix.
-            K (Matrix): Stiffness matrix.
-            F (Matrix): External force matrix.
-            t_start_idx (int): Start time index for the calculation.
-            t_end_idx (int): End time index for the calculation.
         """
         raise NotImplementedError("Subclasses must implement this method")
 
@@ -57,48 +54,9 @@ class BaseStaticSolverABC(ABC):
     @property
     def time(self):
         """
-        Dynamic accessor for time array from state.
+        Dynamic accessor for the output time array from state.
         """
-        return self.state.time
-
-    @property
-    def f(self):
-        """
-        Dynamic accessor for nodal force results from state.
-        """
-        return self.state.f
-
-class BaseDynamicSolverABC(ABC):
-    """
-    Abstract base class for Newmark solvers.
-    """
-    @abstractmethod
-    def calculate(self, K: Matrix, F: Matrix, t_start_idx: int, t_end_idx: int, F_ini: Optional[npt.NDArray[np.float64]] = None):
-        """
-        Abstract method to perform the calculation of the solver.
-
-        Args:
-            K (Matrix): Stiffness matrix.
-            F (Matrix): External force matrix.
-            t_start_idx (int): Start time index for the calculation.
-            t_end_idx (int): End time index for the calculation.
-            F_ini (Optional[npt.NDArray[np.float64]]): Initial external force matrix. Defaults to None.
-        """
-        raise NotImplementedError("Subclasses must implement this method")
-
-    @property
-    def u(self):
-        """
-        Dynamic accessor for displacement results from state.
-        """
-        return self.state.u
-
-    @property
-    def time(self):
-        """
-        Dynamic accessor for time array from state.
-        """
-        return self.state.time
+        return self.state.output_time
 
     @property
     def f(self):

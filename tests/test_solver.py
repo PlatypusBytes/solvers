@@ -3,8 +3,8 @@ import pytest
 import numpy as np
 from scipy import sparse
 
-from solvers.base_solver import BaseStaticSolverABC, BaseDynamicSolverABC, Force, State, calculate_initial_acceleration
-from solvers.linear_equations_solvers import SparseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver
+from solvers.base_solver import Force, State, calculate_initial_acceleration, TimeIntegrationType
+from solvers.linear_equations_solvers import SparseDirectSolver, DenseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver
 from solvers.preconditioners import JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner
 from solvers.newmark_solver import NewmarkExplicit, NewmarkImplicitForce
 from solvers.central_difference_solver import CentralDifferenceSolver
@@ -49,25 +49,6 @@ def setup_module():
 
     number_eq = 2
     return M, K, C, F, n_steps, time, number_eq
-
-
-def test_static_solver_inherits_base_static():
-    """
-    Static solver must extend the static solver ABC.
-    """
-
-    assert issubclass(StaticSolver, BaseStaticSolverABC)
-
-
-@pytest.mark.parametrize("solver_class",[NewmarkExplicit, NewmarkImplicitForce, CentralDifferenceSolver,
-                                         BatheSolver, HHTImplicitForce, HHTExplicit, ZhaiSolver],
-)
-def test_dynamic_solvers_inherit_base_dynamic(solver_class):
-    """
-    Dynamic solvers must extend the dynamic solver ABC.
-    """
-
-    assert issubclass(solver_class, BaseDynamicSolverABC)
 
 
 def test_force_time_exception(setup_module):
@@ -146,3 +127,20 @@ def test_initial_acceleration(setup_module, linear_solver, preconditioner):
                                         np.zeros(number_eq), np.zeros(number_eq),
                                         linear_solver(), prec)
     np.testing.assert_array_equal(acc, np.array([0, 10]))
+
+
+@pytest.mark.parametrize("solver_cls, expected_type",[(StaticSolver, TimeIntegrationType.STATIC),
+                                                      (NewmarkExplicit, TimeIntegrationType.DYNAMIC),
+                                                      (NewmarkImplicitForce, TimeIntegrationType.DYNAMIC),
+                                                      (CentralDifferenceSolver, TimeIntegrationType.DYNAMIC),
+                                                      (BatheSolver, TimeIntegrationType.DYNAMIC),
+                                                      (HHTImplicitForce, TimeIntegrationType.DYNAMIC),
+                                                      (HHTExplicit, TimeIntegrationType.DYNAMIC),
+                                                      (ZhaiSolver, TimeIntegrationType.DYNAMIC),
+                                                      ],
+                                                      )
+def test_solver_time_integration_types(solver_cls, expected_type):
+    solver = solver_cls(Force(), State())
+    assert solver.type is expected_type
+
+

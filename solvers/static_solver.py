@@ -5,10 +5,10 @@ from tqdm import tqdm
 
 from solvers.linear_equations_solvers import LinearSolversABC, SparseDirectSolver
 from solvers.preconditioners import PreconditionerABC
-from solvers.base_solver import BaseStaticSolverABC, Force, State, Matrix
+from solvers.base_solver import BaseSolverABC, Force, State, Matrix, TimeIntegrationType
 
 
-class StaticSolver(BaseStaticSolverABC):
+class StaticSolver(BaseSolverABC):
     """
     Static Solver class.
     """
@@ -30,6 +30,7 @@ class StaticSolver(BaseStaticSolverABC):
         self.preconditioner = preconditioner
         self.force = force
         self.state = state
+        self.type = TimeIntegrationType.STATIC
 
     def initialise(self, number_eq: int, time: npt.NDArray[np.float64]):
         """

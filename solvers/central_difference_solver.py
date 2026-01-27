@@ -4,12 +4,12 @@ from scipy.sparse import diags, issparse
 from tqdm import tqdm
 
 from solvers.utils import LumpingMethod
-from solvers.base_solver import BaseDynamicSolverABC, Force, State, Matrix
+from solvers.base_solver import BaseSolverABC, Force, State, Matrix, TimeIntegrationType
 from solvers.preconditioners import PreconditionerABC
 from solvers.linear_equations_solvers import LinearSolversABC, SparseDirectSolver
 
 
-class CentralDifferenceSolver(BaseDynamicSolverABC):
+class CentralDifferenceSolver(BaseSolverABC):
     """
     Explicit central difference solver following the :cite:p:`Bathe_1996` formulation.
     """
@@ -40,6 +40,7 @@ class CentralDifferenceSolver(BaseDynamicSolverABC):
         self.lump_method = lumping_method
         self.is_lumped = lumping_method != LumpingMethod.NONE
         self._is_sparse_calculation = False
+        self.type = TimeIntegrationType.DYNAMIC
 
     @property
     def u(self) -> np.ndarray:

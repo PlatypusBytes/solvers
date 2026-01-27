@@ -4,10 +4,10 @@ import numpy.typing as npt
 
 from solvers.linear_equations_solvers import LinearSolversABC, SparseDirectSolver
 from solvers.preconditioners import PreconditionerABC
-from solvers.base_solver import BaseDynamicSolverABC, Force, State, Matrix, calculate_initial_acceleration
+from solvers.base_solver import BaseSolverABC, Force, State, Matrix, calculate_initial_acceleration, TimeIntegrationType
 
 
-class HHTImplicitForce(BaseDynamicSolverABC):
+class HHTImplicitForce(BaseSolverABC):
     """
     Hilber-Hughes-Taylor implicit integration scheme with Newton Raphson strategy for non-linear force.
     """
@@ -36,6 +36,7 @@ class HHTImplicitForce(BaseDynamicSolverABC):
         self.linear_solver = linear_solver
         self.preconditioner = preconditioner
         self.alpha = alpha
+        self.type = TimeIntegrationType.DYNAMIC
 
         self.beta = (1 + self.alpha)**2/4
         self.gamma = (1 + 2 * self.alpha)/2
@@ -75,7 +76,7 @@ class HHTImplicitForce(BaseDynamicSolverABC):
         self.force.validate_input(t_start_idx, t_end_idx, self.state.time, self.force.force_matrix)
 
         # calculate time step size
-        t_step = (self.time[t_end_idx] - self.time[t_start_idx]) / (
+        t_step = (self.state.time[t_end_idx] - self.state.time[t_start_idx]) / (
             (t_end_idx - t_start_idx))
 
         # constants for the Newmark integration
@@ -200,7 +201,7 @@ class HHTImplicitForce(BaseDynamicSolverABC):
         pbar.close()
 
 
-class HHTExplicit(BaseDynamicSolverABC):
+class HHTExplicit(BaseSolverABC):
     """
     Hilber-Hughes-Taylor explicit integration scheme.
     """
@@ -226,6 +227,7 @@ class HHTExplicit(BaseDynamicSolverABC):
         self.linear_solver = linear_solver
         self.preconditioner = preconditioner
         self.alpha = alpha
+        self.type = TimeIntegrationType.DYNAMIC
 
         self.beta = (1 + self.alpha)**2/4
         self.gamma = (1 + 2 * self.alpha)/2
