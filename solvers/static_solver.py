@@ -5,12 +5,10 @@ from tqdm import tqdm
 
 from solvers.linear_equations_solvers import LinearSolversABC, SparseDirectSolver
 from solvers.preconditioners import PreconditionerABC
-from solvers.base_solver import BaseSolverABC, Force, State, Matrix
+from solvers.base_solver import BaseStaticSolverABC, Force, State, Matrix
 
 
-
-
-class StaticSolver(BaseSolverABC):
+class StaticSolver(BaseStaticSolverABC):
     """
     Static Solver class.
     """

@@ -4,12 +4,12 @@ from scipy.sparse import diags, issparse
 from tqdm import tqdm
 
 from solvers.utils import LumpingMethod
-from solvers.base_solver import BaseSolverABC, Force, State, Matrix
+from solvers.base_solver import BaseStaticSolverABC, Force, State, Matrix
 from solvers.preconditioners import PreconditionerABC
 from solvers.linear_equations_solvers import LinearSolversABC, SparseDirectSolver
 
 
-class CentralDifferenceSolver(BaseSolverABC):
+class CentralDifferenceSolver(BaseStaticSolverABC):
     """
     Explicit central difference solver following the :cite:p:`Bathe_1996` formulation.
     """

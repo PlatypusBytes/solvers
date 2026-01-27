@@ -4,10 +4,10 @@ import numpy.typing as npt
 
 from solvers.linear_equations_solvers import LinearSolversABC, SparseDirectSolver
 from solvers.preconditioners import PreconditionerABC
-from solvers.base_solver import BaseSolverABC, Force, State, Matrix, calculate_initial_acceleration
+from solvers.base_solver import BaseStaticSolverABC, Force, State, Matrix, calculate_initial_acceleration
 
 
-class HHTImplicitForce(BaseSolverABC):
+class HHTImplicitForce(BaseStaticSolverABC):
     """
     Hilber-Hughes-Taylor implicit integration scheme with Newton Raphson strategy for non-linear force.
     """
@@ -200,7 +200,7 @@ class HHTImplicitForce(BaseSolverABC):
         pbar.close()
 
 
-class HHTExplicit(BaseSolverABC):
+class HHTExplicit(BaseStaticSolverABC):
     """
     Hilber-Hughes-Taylor explicit integration scheme.
     """
