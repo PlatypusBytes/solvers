@@ -1,8 +1,7 @@
-import numpy as np
 import pytest
 
+import numpy as np
 from scipy.sparse import csr_matrix
-from scipy.sparse.linalg import cg, gmres
 
 from solvers.utils import PreConditioner
 

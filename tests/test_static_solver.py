@@ -1,19 +1,14 @@
 import pytest
 
-from tests.utils import *
-
 import numpy as np
 from scipy import sparse
-
-
-import numpy as np
 
 from solvers.static_solver import StaticSolver
 from solvers.base_solver import Force, State
 from solvers.linear_equations_solvers import SparseDirectSolver, DenseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver
 from solvers.preconditioners import JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner
-from solvers.newmark_solver import NewmarkExplicit, NewmarkImplicitForce
 
+from tests.utils import *
 
 
 @pytest.fixture

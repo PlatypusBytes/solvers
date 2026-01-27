@@ -1,7 +1,9 @@
 
 import pytest
+
 import numpy as np
 from scipy.sparse import csr_matrix
+
 from solvers.utils import LumpingMethod
 
 @pytest.fixture

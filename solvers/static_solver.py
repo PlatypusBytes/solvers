@@ -2,14 +2,10 @@ from typing import Optional
 import numpy as np
 import numpy.typing as npt
 from tqdm import tqdm
-from numpy.linalg import solve
-from scipy.sparse.linalg import spsolve
-from scipy.sparse import issparse
 
 from solvers.linear_equations_solvers import LinearSolversABC, SparseDirectSolver
 from solvers.preconditioners import PreconditionerABC
-from solvers.base_solver import BaseSolverABC, Force, State, Matrix, calculate_initial_acceleration
-from solvers.utils import eigen_decomposition
+from solvers.base_solver import BaseSolverABC, Force, State, Matrix
 
 
 
