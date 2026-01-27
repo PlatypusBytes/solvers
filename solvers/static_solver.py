@@ -1,6 +1,7 @@
 from typing import Optional
 import numpy as np
 import numpy.typing as npt
+from scipy.sparse import issparse
 from tqdm import tqdm
 
 from solvers.linear_equations_solvers import LinearSolversABC, SparseDirectSolver
@@ -83,6 +84,9 @@ class StaticSolver(BaseSolverABC):
         # set initial incremental external force
         if F_ini is None:
             F_ini = np.zeros_like(self.force.F)
+        else:
+            if issparse(F_ini):
+                F_ini = F_ini.toarray()[:, 0]
 
         d_force_ini = self.force.F - F_ini
         F_prev = np.copy(self.force.F)

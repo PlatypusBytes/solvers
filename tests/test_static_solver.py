@@ -130,6 +130,55 @@ def test_solver_static_sparse_output_int(setup_module, linear_solver, preconditi
     )
 
 
+@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver])
+@pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
+def test_solver_static_sparse_output_int_staged(setup_module, linear_solver, preconditioner):
+    """
+    Static solver test with sparse matrices
+
+    Args:
+        setup_module: Fixture setting up matrices
+        linear_solver: Linear solver class
+        preconditioner: Preconditioner class
+    """
+    K, F, n_steps, time, number_eq = setup_module
+
+    K = sparse.csc_matrix(K)
+    F = sparse.csc_matrix(F)
+
+    prec = preconditioner() if preconditioner is not None else None
+
+    res = StaticSolver(Force(), State(output_interval=1), linear_solver=linear_solver(), preconditioner=prec)
+    res.initialise(number_eq, time)
+    res.calculate(K, F, 0, n_steps)
+    res.state.update_initial_conditions(n_steps // 2)
+    res.calculate(K, F, n_steps // 2, n_steps, F_ini=F[:, n_steps // 2])
+    # check static solution
+    np.testing.assert_array_almost_equal(
+        np.round(res.u, 2),
+        np.round(
+            np.array(
+                [
+                    [0, 0],
+                    [1.0, 3.0],
+                    [1.0, 3.0],
+                    [1.0, 3.0],
+                    [1.0, 3.0],
+                    [1.0, 3.0],
+                    [1.0, 3.0],
+                    [1.0, 3.0],
+                    [1.0, 3.0],
+                    [1.0, 3.0],
+                    [1.0, 3.0],
+                    [1.0, 3.0],
+                    [1.0, 3.0],
+                ]
+            ),
+            2,
+        ),
+    )
+
+
 @pytest.mark.parametrize("linear_solver", [DenseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver])
 def test_solver_static_np_array(setup_module, linear_solver):
     """

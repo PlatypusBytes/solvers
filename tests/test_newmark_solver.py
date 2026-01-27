@@ -128,7 +128,6 @@ def test_newmark_sparse_output_int(setup_module, linear_solver, preconditioner, 
     )
 
 
-
 @pytest.mark.parametrize("linear_solver", [SparseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver])
 @pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
 @pytest.mark.parametrize("newmark", [NewmarkExplicit, NewmarkImplicitForce])
