@@ -1,102 +1,178 @@
-# unit test for solver
-# tests based on Bathe
-# for newmark pg 782
-import unittest
-from solvers.static_solver import StaticSolver
+import pytest
 
 from tests.utils import *
 
 import numpy as np
 from scipy import sparse
 
-class TestStatic(unittest.TestCase):
-    def setUp(self):
-        # newmark settings
-        self.settings = {
-            "beta": 0.25,
-            "gamma": 0.5,
-        }
 
-        # example from bathe
-        M = [[2, 0], [0, 1]]
-        K = [[6, -2], [-2, 4]]
-        C = [[0, 0], [0, 0]]
-        F = np.zeros((2, 13))
-        F[1, :] = 10
-        self.K = sparse.csc_matrix(np.array(K))
-        self.F = sparse.csc_matrix(np.array(F))
+import numpy as np
 
-        self.u0 = np.zeros(2)
-        self.v0 = np.zeros(2)
-
-        self.n_steps = 12
-        self.t_step = 0.28
-        self.t_total = self.n_steps * self.t_step
-
-        self.time = np.linspace(
-            0, self.t_total, int(np.ceil((self.t_total - 0) / self.t_step)+1)
-        )
-
-        self.number_eq = 2
-        return
+from solvers.static_solver import StaticSolver
+from solvers.base_solver import Force, State
+from solvers.linear_equations_solvers import SparseDirectSolver, DenseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver
+from solvers.preconditioners import JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner
+from solvers.newmark_solver import NewmarkExplicit, NewmarkImplicitForce
 
 
-    def run_test_solver_static(self):
-        res = StaticSolver()
-        res.initialise(self.number_eq, self.time)
-        res.calculate(self.K, self.F, 0, self.n_steps)
-        # check static solution
-        np.testing.assert_array_almost_equal(
-            np.round(res.u, 2),
-            np.round(
-                np.array(
-                    [
-                        [0, 0],
-                        [1.0, 3.0],
-                        [1.0, 3.0],
-                        [1.0, 3.0],
-                        [1.0, 3.0],
-                        [1.0, 3.0],
-                        [1.0, 3.0],
-                        [1.0, 3.0],
-                        [1.0, 3.0],
-                        [1.0, 3.0],
-                        [1.0, 3.0],
-                        [1.0, 3.0],
-                        [1.0, 3.0],
-                    ]
-                ),
-                2,
+
+@pytest.fixture
+def setup_module():
+    """
+    Setup matrices for testing newmark solver.
+    Example from Bathe Chp: 9.2.4 (pg 794).
+
+    Returns:
+        M, K, C, F: Mass, Stiffness, Damping matrices and Force vector
+        n_steps: number of time steps
+        time: time vector
+        number_eq: number of equations
+    """
+
+    # example from bathe
+    M = [[2, 0], [0, 1]]
+    K = [[6, -2], [-2, 4]]
+    C = [[0, 0], [0, 0]]
+    F = np.zeros((2, 13))
+    F[1, :] = 10
+    M = sparse.csc_matrix(np.array(M))
+    K = sparse.csc_matrix(np.array(K))
+    C = sparse.csc_matrix(np.array(C))
+    F = sparse.csc_matrix(np.array(F))
+
+    n_steps = 12
+    t_step = 0.28
+    t_total = n_steps * t_step
+
+    time = np.linspace(0, t_total, int(np.ceil((t_total - 0) / t_step) + 1))
+
+    number_eq = 2
+    return K, F, n_steps, time, number_eq
+
+
+
+@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver])
+@pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
+def test_solver_static_sparse(setup_module, linear_solver, preconditioner):
+    """
+    Static solver test with sparse matrices
+
+    Args:
+        setup_module: Fixture setting up matrices
+        linear_solver: Linear solver class
+        preconditioner: Preconditioner class
+    """
+    K, F, n_steps, time, number_eq = setup_module
+
+    K = sparse.csc_matrix(K)
+    F = sparse.csc_matrix(F)
+
+    prec = preconditioner() if preconditioner is not None else None
+
+    res = StaticSolver(Force(), State(), linear_solver=linear_solver(), preconditioner=prec)
+    res.initialise(number_eq, time)
+    res.calculate(K, F, 0, n_steps)
+    # check static solution
+    np.testing.assert_array_almost_equal(
+        np.round(res.u, 2),
+        np.round(
+            np.array(
+                [
+                    [0, 0],
+                    [1.0, 3.0],
+                    [1.0, 3.0],
+                    [1.0, 3.0],
+                    [1.0, 3.0],
+                    [1.0, 3.0],
+                    [1.0, 3.0],
+                    [1.0, 3.0],
+                    [1.0, 3.0],
+                    [1.0, 3.0],
+                    [1.0, 3.0],
+                    [1.0, 3.0],
+                    [1.0, 3.0],
+                ]
             ),
-        )
-        return
+            2,
+        ),
+    )
 
 
-    def test_sparse_solver_static(self):
-        _,self.K, _, self.F = set_matrices_as_sparse(np.empty(()), self.K, np.empty(()), self.F)
-        self.run_test_solver_static()
+@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver])
+@pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
+def test_solver_static_sparse_output_int(setup_module, linear_solver, preconditioner):
+    """
+    Static solver test with sparse matrices
+
+    Args:
+        setup_module: Fixture setting up matrices
+        linear_solver: Linear solver class
+        preconditioner: Preconditioner class
+    """
+    K, F, n_steps, time, number_eq = setup_module
+
+    K = sparse.csc_matrix(K)
+    F = sparse.csc_matrix(F)
+
+    prec = preconditioner() if preconditioner is not None else None
+
+    res = StaticSolver(Force(), State(output_interval=10), linear_solver=linear_solver(), preconditioner=prec)
+    res.initialise(number_eq, time)
+    res.calculate(K, F, 0, n_steps)
+    # check static solution
+    np.testing.assert_array_almost_equal(
+        np.round(res.u, 2),
+        np.round(
+            np.array(
+                [
+                    [0, 0],
+                    [1.0, 3.0],
+                    [1.0, 3.0],
+                ]
+            ),
+            2,
+        ),
+    )
 
 
-    def test_np_array_solver_static(self):
-        _, self.K, _, self.F = set_matrices_as_np_array(None, self.K, None, self.F)
-        self.run_test_solver_static()
+@pytest.mark.parametrize("linear_solver", [DenseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver])
+def test_solver_static_np_array(setup_module, linear_solver):
+    """
+    Static solver test with numpy array matrices
 
-    def test_output_interval_static(self):
-        _, self.K, _, self.F = set_matrices_as_np_array(None, self.K, None, self.F)
+    Args:
+        setup_module: Fixture setting up matrices
+        linear_solver: Linear solver class
+    """
+    K, F, n_steps, time, number_eq = setup_module
 
-        output_interval = 10
+    K = K.toarray()
+    F = F.toarray()
 
-        # write all output
-        res = StaticSolver()
-        res.initialise(self.number_eq, self.time)
-        res.calculate(self.K, self.F, 0, self.n_steps)
-        expected_displacement = np.concatenate((res.u[0::output_interval, :], res.u[None, -1, :]), axis=0)
-
-        # write every other step
-        res_2 = StaticSolver()
-        res_2.output_interval = output_interval
-        res_2.initialise(self.number_eq, self.time)
-        res_2.calculate(self.K, self.F, 0, self.n_steps)
-
-        # assert
-        np.testing.assert_array_almost_equal(expected_displacement, res_2.u)
+    res = StaticSolver(Force(), State(), linear_solver=linear_solver(), preconditioner=None)
+    res.initialise(number_eq, time)
+    res.calculate(K, F, 0, n_steps)
+    # check static solution
+    np.testing.assert_array_almost_equal(
+        np.round(res.u, 2),
+        np.round(
+            np.array(
+                [
+                    [0, 0],
+                    [1.0, 3.0],
+                    [1.0, 3.0],
+                    [1.0, 3.0],
+                    [1.0, 3.0],
+                    [1.0, 3.0],
+                    [1.0, 3.0],
+                    [1.0, 3.0],
+                    [1.0, 3.0],
+                    [1.0, 3.0],
+                    [1.0, 3.0],
+                    [1.0, 3.0],
+                    [1.0, 3.0],
+                ]
+            ),
+            2,
+        ),
+    )

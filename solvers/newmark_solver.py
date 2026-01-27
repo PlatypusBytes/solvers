@@ -43,7 +43,7 @@ class NewmarkImplicitForce(BaseSolverABC):
         self.max_iter = max_iter
         self.tolerance = tolerance
 
-    def initialise(self, number_eq: int, time: np.ndarray):
+    def initialise(self, number_eq: int, time: npt.NDArray[np.float64]):
         """
         Initialise the solver state.
 

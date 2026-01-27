@@ -1,100 +1,118 @@
-from solvers.base_solver import Solver
-
+from typing import Optional
 import numpy as np
+import numpy.typing as npt
+from tqdm import tqdm
 from numpy.linalg import solve
 from scipy.sparse.linalg import spsolve
 from scipy.sparse import issparse
 
-from tqdm import tqdm
+from solvers.linear_equations_solvers import LinearSolversABC, SparseDirectSolver
+from solvers.preconditioners import PreconditionerABC
+from solvers.base_solver import BaseSolverABC, Force, State, Matrix, calculate_initial_acceleration
+from solvers.utils import eigen_decomposition
 
 
-class StaticSolver(Solver):
+
+
+class StaticSolver(BaseSolverABC):
     """
-    Static Solver class. This class contains the static incremental solver. This class bases from
-    :class:`~rose.model.solver.Solver`.
-
+    Static Solver class.
     """
-
-    def __init__(self):
-        super(StaticSolver, self).__init__()
-
-    def calculate(self, K, F, t_start_idx, t_end_idx, F_ini=None):
+    def __init__(self,
+                 force: Force,
+                 state: State,
+                 linear_solver: LinearSolversABC = SparseDirectSolver(),
+                 preconditioner: PreconditionerABC = None):
         """
-        Static integration scheme.
-        Incremental formulation.
+        Constructor of the Static Solver class.
+        """
+        self.linear_solver = linear_solver
+        self.preconditioner = preconditioner
+        self.force = force
+        self.state = state
 
-        :param K: Stiffness matrix
-        :param F: External force matrix
-        :param t_start_idx: time index of starting time for the stage analysis
-        :param t_end_idx: time index of end time for the stage analysis
-        :return:
+    def initialise(self, number_eq: int, time: npt.NDArray[np.float64]):
+        """
+        Initialise the solver state.
+
+        Args:
+            number_eq (int): Number of equations
+            time (npt.NDArray[np.float64]): Time array
+        """
+        self.state.initialise(number_eq, time)
+
+    def calculate(self, K: Matrix, F: Matrix, t_start_idx: int, t_end_idx: int, F_ini: Optional[Matrix] = None):
+        """
+        Perform calculation with the Static solver incremental formulation.
+
+        Args:
+            K (Matrix): Stiffness matrix
+            F (Matrix): External force matrix
+            t_start_idx (int): Start time index
+            t_end_idx (int): End time index
+            F_ini (Optional[Matrix], optional): Initial external force matrix. Defaults to None.
         """
 
-        self.initialise_stage(F)
+        self.force.initialise_stage(F)
+
+        # validate force input
+        self.force.validate_input(t_start_idx, t_end_idx, self.state.time, self.force.force_matrix)
 
         # initial conditions u
-        u = self.u0
+        u = self.state.u0
 
-        output_time_idx = np.where(self.output_time_indices == t_start_idx)[0][0]
+        self.force.update_rhs_at_time_step(t_start_idx)
+        self.force.update_rhs_at_non_linear_iteration(t_start_idx, u=u)
+
+        output_time_idx = np.where(self.state.output_time_indices == t_start_idx)[0][0]
         t2 = output_time_idx + 1
 
-        self.update_rhs_at_time_step(t_start_idx)
-        self.update_rhs_at_non_linear_iteration(t_start_idx,u=u)
-
         # add to results initial conditions
-        self.u[output_time_idx, :] = u
-
-        self.F_out[output_time_idx, :] = np.copy(self.F)
-
-        # validate input
-        self.validate_input(t_start_idx, t_end_idx)
+        self.state.store_step(output_time_idx, u, None, None, None, self.force.F)
 
         # define progress bar
-        pbar = tqdm(
-            total=(t_end_idx - t_start_idx),
-            unit_scale=True,
-            unit_divisor=1000,
-            unit="steps",
-        )
+        pbar = tqdm(total=(t_end_idx - t_start_idx), unit_scale=True, unit_divisor=1000, unit="steps")
 
-        self.update_rhs_at_time_step(t_start_idx)
-        self.update_rhs_at_non_linear_iteration(t_start_idx)
+        self.force.update_rhs_at_time_step(t_start_idx)
+        self.force.update_rhs_at_non_linear_iteration(t_start_idx, u=u)
 
         # set initial incremental external force
         if F_ini is None:
-            F_ini = np.zeros_like(self.F)
+            F_ini = np.zeros_like(self.force.F)
 
-        d_force_ini = self.F - F_ini
-        F_prev = np.copy(self.F)
+        d_force_ini = self.force.F - F_ini
+        F_prev = np.copy(self.force.F)
+
+        # Build preconditioner if provided
+        if self.preconditioner is not None:
+            pre_c = self.preconditioner.build(K)
+        else:
+            pre_c = None
 
         for t in range(t_start_idx + 1, t_end_idx + 1):
             # update progress bar
             pbar.update(1)
 
-            self.update_rhs_at_time_step(t)
-            self.update_rhs_at_non_linear_iteration(t)
+            self.force.update_rhs_at_time_step(t)
+            self.force.update_rhs_at_non_linear_iteration(t)
 
             # update external force
-            d_force = d_force_ini + self.F - F_prev
+            d_force = d_force_ini + self.force.F - F_prev
 
             # solve
-            if issparse(K):
-                uu = spsolve(K, d_force)
-            else:
-                uu = solve(K,d_force)
+            uu = self.linear_solver.solve(K, d_force, M=pre_c)
 
             # update displacement
             u = u + uu
 
             # add to results
-            if t == self.output_time_indices[t2]:
-                self.u[t2, :] = u
-
-                self.F_out[t2, :] = np.copy(self.F)
+            # add to results
+            if t == self.state.output_time_indices[t2]:
+                self.state.store_step(t, u, None, None, K @ u, self.force.F)
                 t2 += 1
 
             d_force_ini = 0
-            F_prev = np.copy(self.F)
+            F_prev = np.copy(self.force.F)
 
         # close the progress bar
         pbar.close()

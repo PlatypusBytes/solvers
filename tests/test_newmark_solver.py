@@ -92,6 +92,43 @@ def test_newmark_sparse(setup_module, linear_solver, preconditioner, newmark):
     )
 
 
+@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver])
+@pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
+@pytest.mark.parametrize("newmark", [NewmarkExplicit, NewmarkImplicitForce])
+def test_newmark_sparse_output_int(setup_module, linear_solver, preconditioner, newmark):
+    """
+    Test Newmark solver with different linear solvers and preconditioners using sparse matrices.
+
+    Args:
+        setup_module: Fixture setting up matrices
+        linear_solver: Linear solver class
+        preconditioner: Preconditioner class
+        newmark: Newmark solver class
+    """
+    M, K, C, F, n_steps, time, number_eq = setup_module
+    M, K, C, F = set_matrices_as_sparse(M, K, C, F)
+
+    prec = preconditioner() if preconditioner is not None else None
+
+    res = newmark(Force(), State(output_interval=10), linear_solver=linear_solver(), preconditioner=prec)
+    res.initialise(number_eq, time)
+    res.calculate(M, C, K, F, 0, n_steps)
+    # check solution
+    np.testing.assert_array_almost_equal(
+        np.round(res.u, 2),
+        np.round(
+            np.array(
+                [
+                    [0, 0],
+                    [2.85, 2.90],
+                    [1.40, 2.31],
+                ]
+            ),
+            2,
+        ),
+    )
+
+
 @pytest.mark.parametrize("linear_solver", [DenseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver])
 @pytest.mark.parametrize("newmark", [NewmarkExplicit, NewmarkImplicitForce])
 def test_newmark_dense(setup_module, linear_solver, newmark):

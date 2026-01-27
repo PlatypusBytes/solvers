@@ -72,7 +72,7 @@ class State:
     """
     State class. This class forms the base for each solver.
     """
-    def __init__(self):
+    def __init__(self, output_interval: int = 1):
         """
         Initializes the State class with default attributes.
         """
@@ -83,7 +83,7 @@ class State:
         self.a = None
         self.f = None
         self.time = None
-        self.output_interval = 1
+        self.output_interval = output_interval
         self.F_out = None
         self.output_time = None
         self.output_time_indices = None

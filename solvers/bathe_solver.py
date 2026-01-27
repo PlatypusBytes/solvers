@@ -1,4 +1,5 @@
 import numpy as np
+import numpy.typing as npt
 from tqdm import tqdm
 
 from solvers.base_solver import BaseSolverABC, Matrix
@@ -7,7 +8,7 @@ from solvers.utils import LumpingMethod
 from solvers.linear_equations_solvers import LinearSolversABC, SparseDirectSolver
 from solvers.preconditioners import PreconditionerABC
 from solvers.base_solver import BaseSolverABC, Force, State, Matrix, calculate_initial_acceleration
-from solvers.utils import eigen_decomposition
+
 
 class BatheSolver(BaseSolverABC):
     """
@@ -39,7 +40,7 @@ class BatheSolver(BaseSolverABC):
         self.is_lumped = lumping_method != LumpingMethod.NONE
         self._p = 0.54  # Bathe parameter
 
-    def initialise(self, number_eq: int, time: np.ndarray):
+    def initialise(self, number_eq: int, time: npt.NDArray[np.float64]):
         """
         Initialise the solver state.
 

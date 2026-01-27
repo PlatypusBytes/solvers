@@ -95,6 +95,45 @@ def test_hht_sparse(setup_module, linear_solver, preconditioner, hht):
         ),
     )
 
+@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver])
+@pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
+@pytest.mark.parametrize("hht", [HHTExplicit, HHTImplicitForce])
+def test_hht_sparse_output_int(setup_module, linear_solver, preconditioner, hht):
+    """
+    Test HHT solver with sparse matrices.
+    Results are compared to reference solution from Bathe for Newmark. HHT reduced to Newmark when alpha=0.
+
+    Args:
+        setup_module: fixture that sets up matrices and parameters
+        linear_solver: linear solver class to use
+        preconditioner: preconditioner class to use
+        hht: HHT solver class to test
+    """
+
+    M, K, C, F, n_steps, time, number_eq = setup_module
+    M, K, C, F = set_matrices_as_sparse(M, K, C, F)
+
+    prec = preconditioner() if preconditioner is not None else None
+
+    res = hht(Force(), State(output_interval=10), linear_solver=linear_solver(), preconditioner=prec, alpha=0)
+    res.initialise(number_eq, time)
+    res.calculate(M, C, K, F, 0, n_steps)
+
+    # check solution
+    np.testing.assert_array_almost_equal(
+        np.round(res.u, 2),
+        np.round(
+            np.array(
+                [
+                    [0, 0],
+                    [2.85, 2.90],
+                    [1.40, 2.31],
+                ]
+            ),
+            2,
+        ),
+    )
+
 
 @pytest.mark.parametrize("linear_solver", [DenseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver])
 @pytest.mark.parametrize("hht", [HHTExplicit, HHTImplicitForce])

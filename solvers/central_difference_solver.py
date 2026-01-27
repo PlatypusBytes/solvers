@@ -1,4 +1,5 @@
 import numpy as np
+import numpy.typing as npt
 from scipy.sparse import diags, issparse
 from tqdm import tqdm
 
@@ -68,13 +69,13 @@ class CentralDifferenceSolver(BaseSolverABC):
         """
         return self.state.time
 
-    def initialise(self, number_eq: int, time: np.ndarray):
+    def initialise(self, number_eq: int, time: npt.NDArray[np.float64]):
         """
         Initialise solver state for the provided number of equations and time vector.
 
         Args:
             number_eq (int): Number of equations
-            time (np.ndarray): Time vector
+            time (npt.NDArray[np.float64]): Time vector
         """
         self.state.initialise(number_eq, time)
 
