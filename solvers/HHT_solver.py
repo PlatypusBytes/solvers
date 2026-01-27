@@ -12,8 +12,8 @@ class HHTImplicitForce(BaseSolverABC):
     Hilber-Hughes-Taylor implicit integration scheme with Newton Raphson strategy for non-linear force.
     """
     def __init__(self,
-                 force: Force,
-                 state: State,
+                 force: Force = Force(),
+                 state: State = State(),
                  linear_solver: LinearSolversABC = SparseDirectSolver(),
                  preconditioner: PreconditionerABC = None,
                  alpha: float = 1/6,
@@ -23,10 +23,10 @@ class HHTImplicitForce(BaseSolverABC):
         Initializes the HHT implicit solver with given parameters.
 
         Args:
-            force (Force): Force instance
-            state (State): State instance
-            linear_solver (SolversABC): Linear solver instance
-            preconditioner (PreconditionerABC): Preconditioner instance
+            force (Force): Force instance (default: Force())
+            state (State): State instance (default: State())
+            linear_solver (LinearSolversABC): Linear solver instance (default: SparseDirectSolver())
+            preconditioner (PreconditionerABC): Preconditioner instance (default: None)
             alpha (float): HHT alpha parameter for numerical dissipation.
             max_iter (int): Maximum number of iterations for the Newton-Raphson method.
             tolerance (float): Convergence tolerance for the Newton-Raphson method.
@@ -205,21 +205,20 @@ class HHTExplicit(BaseSolverABC):
     Hilber-Hughes-Taylor explicit integration scheme.
     """
     def __init__(self,
-                 force: Force,
-                 state: State,
+                 force: Force = Force(),
+                 state: State = State(),
                  linear_solver: LinearSolversABC = SparseDirectSolver(),
                  preconditioner: PreconditionerABC = None,
                  alpha: float = 1/6,
-                 max_iter: int =15,
-                 tolerance: float = 1e-5):
+                 ):
         """
         Initializes the HHT explicit solver with given parameters.
 
         Args:
-            force (Force): Force instance
-            state (State): State instance
-            linear_solver (SolversABC): Linear solver instance
-            preconditioner (PreconditionerABC): Preconditioner instance
+            force (Force): Force instance (default: Force())
+            state (State): State instance (default: State())
+            linear_solver (LinearSolversABC): Linear solver instance (default: SparseDirectSolver())
+            preconditioner (PreconditionerABC): Preconditioner instance (default: None)
             alpha (float): HHT alpha parameter for numerical dissipation.
         """
         self.force = force
@@ -230,8 +229,6 @@ class HHTExplicit(BaseSolverABC):
 
         self.beta = (1 + self.alpha)**2/4
         self.gamma = (1 + 2 * self.alpha)/2
-        self.max_iter = max_iter
-        self.tolerance = tolerance
 
     def initialise(self, number_eq: int, time: npt.NDArray[np.float64]):
         """

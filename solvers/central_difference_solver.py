@@ -14,8 +14,8 @@ class CentralDifferenceSolver(BaseSolverABC):
     Explicit central difference solver following the :cite:p:`Bathe_1996` formulation.
     """
     def __init__(self,
-                 force: Force,
-                 state: State,
+                 force: Force = Force(),
+                 state: State = State(),
                  linear_solver: LinearSolversABC = SparseDirectSolver(),
                  preconditioner: PreconditionerABC = None,
                  lumping_method: LumpingMethod = LumpingMethod.RowSum):
@@ -23,9 +23,9 @@ class CentralDifferenceSolver(BaseSolverABC):
         Constructor of the Central Difference Solver.
 
         Args:
-            force (Force): Force class containing the force definitions
-            state (State): State class containing the state
-            linear_solver (LinearSolversABC): Linear solver to be used (default: SparseDirectSolver)
+            force (Force): Force class containing the force definitions (default: Force())
+            state (State): State class containing the state (default: State())
+            linear_solver (LinearSolversABC): Linear solver to be used (default: SparseDirectSolver())
             preconditioner (PreconditionerABC): Preconditioner to be used (default: None)
             lumping_method (LumpingMethod): Lumping method to be used (default: RowSum)
         """

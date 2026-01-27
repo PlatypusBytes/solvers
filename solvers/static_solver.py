@@ -15,12 +15,18 @@ class StaticSolver(BaseSolverABC):
     Static Solver class.
     """
     def __init__(self,
-                 force: Force,
-                 state: State,
+                 force: Force = Force(),
+                 state: State = State(),
                  linear_solver: LinearSolversABC = SparseDirectSolver(),
                  preconditioner: PreconditionerABC = None):
         """
         Constructor of the Static Solver class.
+
+        Args:
+            force (Force): Force class containing the force definitions (default: Force())
+            state (State): State class containing the state (default: State())
+            linear_solver (LinearSolversABC): Linear solver to be used (default: SparseDirectSolver())
+            preconditioner (PreconditionerABC): Preconditioner to be used (default: None)
         """
         self.linear_solver = linear_solver
         self.preconditioner = preconditioner

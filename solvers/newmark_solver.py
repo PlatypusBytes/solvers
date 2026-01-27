@@ -12,8 +12,8 @@ class NewmarkImplicitForce(BaseSolverABC):
     Implicit Newmark Solver class.
     """
     def __init__(self,
-                 force: Force,
-                 state: State,
+                 force: Force = Force(),
+                 state: State = State(),
                  beta: float = 0.25,
                  gamma: float = 0.5,
                  linear_solver: LinearSolversABC = SparseDirectSolver(),
@@ -24,11 +24,11 @@ class NewmarkImplicitForce(BaseSolverABC):
         Constructor of the Implicit Newmark Solver.
 
         Args:
-            force (Force): Force class containing the force definitions
-            state (State): State class containing the state
+            force (Force): Force class containing the force definitions (default: Force())
+            state (State): State class containing the state (default: State())
             beta (float): Newmark numerical stability parameter (default: 0.25)
             gamma (float): Newmark numerical stability parameter (default: 0.5)
-            linear_solver (LinearSolversABC): Linear solver to be used (default: SparseDirectSolver)
+            linear_solver (LinearSolversABC): Linear solver to be used (default: SparseDirectSolver())
             preconditioner (PreconditionerABC): Preconditioner to be used (default: None)
             max_iter (int): Maximum number of iterations for the Newton-Raphson scheme (default: 15)
             tolerance (float): Tolerance for convergence in the Newton-Raphson scheme (default: 1e-5)
@@ -208,8 +208,8 @@ class NewmarkExplicit(BaseSolverABC):
     Explicit Newmark Solver class.
     """
     def __init__(self,
-                 force: Force,
-                 state: State,
+                 force: Force = Force(),
+                 state: State = State(),
                  beta: float = 0.25,
                  gamma: float = 0.5,
                  linear_solver: LinearSolversABC = SparseDirectSolver(),
@@ -218,11 +218,11 @@ class NewmarkExplicit(BaseSolverABC):
         Constructor of the Explicit Newmark Solver.
 
         Args:
-            force (Force): Force class containing the force definitions
-            state (State): State class containing the state
+            force (Force): Force class containing the force definitions (default: Force())
+            state (State): State class containing the state (default: State())
             beta (float): Newmark numerical stability parameter (default: 0.25)
             gamma (float): Newmark numerical stability parameter (default: 0.5)
-            linear_solver (LinearSolversABC): Linear solver to be used (default: SparseDirectSolver)
+            linear_solver (LinearSolversABC): Linear solver to be used (default: SparseDirectSolver())
             preconditioner (PreconditionerABC): Preconditioner to be used (default: None)
         """
         self.beta = beta

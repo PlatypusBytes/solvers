@@ -17,8 +17,8 @@ class BatheSolver(BaseSolverABC):
     """
 
     def __init__(self,
-                 force: Force,
-                 state: State,
+                 force: Force = Force(),
+                 state: State = State(),
                  linear_solver: LinearSolversABC = SparseDirectSolver(),
                  preconditioner: PreconditionerABC = None,
                  lumping_method=LumpingMethod.RowSum
@@ -26,8 +26,12 @@ class BatheSolver(BaseSolverABC):
         """
         Initialisation of the Bathe Solver class.
 
-        Parameters:
-        :param lumping_method: method of lumping the mass matrix: default "RowSum"
+        Args:
+            force (Force): Force class containing the force definitions (default: Force())
+            state (State): State class containing the state (default: State())
+            linear_solver (LinearSolversABC): Linear solver to be used (default: SparseDirectSolver())
+            preconditioner (PreconditionerABC): Preconditioner to be used (default: None)
+            lumping_method (LumpingMethod): Lumping method to be used (default: RowSum)
         """
         if not isinstance(lumping_method, LumpingMethod):
             raise ValueError("Lumping method must be of type LumpingMethod")
