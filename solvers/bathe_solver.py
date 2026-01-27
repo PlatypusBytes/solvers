@@ -2,15 +2,13 @@ import numpy as np
 import numpy.typing as npt
 from tqdm import tqdm
 
-from solvers.base_solver import BaseStaticSolverABC, Matrix
 from solvers.utils import LumpingMethod
-
 from solvers.linear_equations_solvers import LinearSolversABC, SparseDirectSolver
 from solvers.preconditioners import PreconditionerABC
-from solvers.base_solver import BaseStaticSolverABC, Force, State, Matrix, calculate_initial_acceleration
+from solvers.base_solver import BaseDynamicSolverABC, Force, State, Matrix, calculate_initial_acceleration
 
 
-class BatheSolver(BaseStaticSolverABC):
+class BatheSolver(BaseDynamicSolverABC):
     """
     Bathe Solver class.
     This class contains the explicit solver according to :cite:p: `Noh_Bathe_2013`.

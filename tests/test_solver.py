@@ -1,14 +1,10 @@
-# unit test for solver
-# tests based on Bathe
-# for newmark pg 782
 import pytest
-# from solvers.base_solver import Solver, TimeException
-# from solvers.newmark_solver import NewmarkSolver
-# from solvers.zhai_solver import ZhaiSolver
-# from solvers.static_solver import StaticSolver
 
-from solvers.base_solver import Force, State, calculate_initial_acceleration
-from solvers.linear_equations_solvers import SparseDirectSolver, DenseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver
+import numpy as np
+from scipy import sparse
+
+from solvers.base_solver import BaseStaticSolverABC, BaseDynamicSolverABC, Force, State, calculate_initial_acceleration
+from solvers.linear_equations_solvers import SparseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver
 from solvers.preconditioners import JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner
 from solvers.newmark_solver import NewmarkExplicit, NewmarkImplicitForce
 from solvers.central_difference_solver import CentralDifferenceSolver
@@ -18,11 +14,6 @@ from solvers.zhai_solver import ZhaiSolver
 from solvers.static_solver import StaticSolver
 
 from tests.utils import *
-
-import numpy as np
-from scipy import sparse
-
-
 
 
 @pytest.fixture
@@ -58,6 +49,25 @@ def setup_module():
 
     number_eq = 2
     return M, K, C, F, n_steps, time, number_eq
+
+
+def test_static_solver_inherits_base_static():
+    """
+    Static solver must extend the static solver ABC.
+    """
+
+    assert issubclass(StaticSolver, BaseStaticSolverABC)
+
+
+@pytest.mark.parametrize("solver_class",[NewmarkExplicit, NewmarkImplicitForce, CentralDifferenceSolver,
+                                         BatheSolver, HHTImplicitForce, HHTExplicit, ZhaiSolver],
+)
+def test_dynamic_solvers_inherit_base_dynamic(solver_class):
+    """
+    Dynamic solvers must extend the dynamic solver ABC.
+    """
+
+    assert issubclass(solver_class, BaseDynamicSolverABC)
 
 
 def test_force_time_exception(setup_module):

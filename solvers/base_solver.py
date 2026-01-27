@@ -68,7 +68,7 @@ class BaseStaticSolverABC(ABC):
         """
         return self.state.f
 
-class BaseStaticSolverABC(ABC):
+class BaseDynamicSolverABC(ABC):
     """
     Abstract base class for Newmark solvers.
     """
