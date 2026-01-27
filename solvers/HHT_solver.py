@@ -67,13 +67,16 @@ class HHTImplicitForce(BaseSolverABC):
             t_end_idx (int): time index of end time for the stage analysis
         """
 
+        # initialize force for the stage
         self.force.initialise_stage(F)
+        # validate force input
+        self.force.validate_input(t_start_idx, t_end_idx, self.state.time, self.force.force_matrix)
+
+        # update output arrays for the stage
+        self.state.update_output_arrays(t_start_idx, t_end_idx)
 
         # check if sparse calculation should be performed
         M, C, K = self.state.check_for_sparse(M, C, K)
-
-        # validate solver index
-        self.force.validate_input(t_start_idx, t_end_idx, self.state.time, self.force.force_matrix)
 
         # calculate time step size
         t_step = (self.state.time[t_end_idx] - self.state.time[t_start_idx]) / (
@@ -255,13 +258,17 @@ class HHTExplicit(BaseSolverABC):
         :param t_end_idx: time index of end time for the stage analysis
         :return:
         """
+        # initialize force for the stage
         self.force.initialise_stage(F)
+        # validate force input
+        self.force.validate_input(t_start_idx, t_end_idx, self.state.time, self.force.force_matrix)
+
+        # update output arrays for the stage
+        self.state.update_output_arrays(t_start_idx, t_end_idx)
+
 
         # check if sparse calculation should be performed
         M, C, K = self.state.check_for_sparse(M, C, K)
-
-        # validate force index
-        self.force.validate_input(t_start_idx, t_end_idx, self.state.time, self.force.force_matrix)
 
         # calculate time step size
         t_step = (self.state.time[t_end_idx] - self.state.time[t_start_idx]) / (

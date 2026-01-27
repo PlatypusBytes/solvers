@@ -128,6 +128,64 @@ def test_newmark_sparse_output_int(setup_module, linear_solver, preconditioner, 
     )
 
 
+
+@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver])
+@pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
+@pytest.mark.parametrize("newmark", [NewmarkExplicit, NewmarkImplicitForce])
+def test_newmark_sparse_output_int_staged(setup_module, linear_solver, preconditioner, newmark):
+    """
+    Test Newmark solver with different linear solvers and preconditioners using sparse matrices.
+    The time to save the results does not align with the time steps, so the solver needs to add extra time steps.
+
+    Args:
+        setup_module: Fixture setting up matrices
+        linear_solver: Linear solver class
+        preconditioner: Preconditioner class
+        newmark: Newmark solver class
+    """
+    M, K, C, F, _, time, number_eq = setup_module
+
+
+    # set matrices as sparse
+    M, K, C, F = set_matrices_as_sparse(M, K, C, F)
+
+    prec = preconditioner() if preconditioner is not None else None
+
+    # run stages
+    res = newmark(Force(), State(output_interval=4), linear_solver=linear_solver(), preconditioner=prec)
+    res.initialise(number_eq, time)
+    # run first stage
+    res.calculate(M, C, K, F, 0, 6)
+    # run second stage
+    res.state.update_initial_conditions(6)
+    res.calculate(M, C, K, F, 6, len(time) - 1)
+
+    # check solution
+    np.testing.assert_array_almost_equal(
+        np.round(res.u, 2),
+        np.round(
+            np.array(
+                [
+                    [0, 0],
+                    # [0.00673, 0.364],
+                    # [0.0505, 1.35],
+                    # [0.189, 2.68],
+                    [0.485, 4.00],
+                    # [0.961, 4.95],
+                    [1.58, 5.34],
+                    # [2.23, 5.13],
+                    [2.76, 4.48],
+                    # [3.00, 3.64],
+                    # [2.85, 2.90],
+                    # [2.28, 2.44],
+                    [1.40, 2.31],
+                ]
+            ),
+            2,
+        ),
+    )
+
+
 @pytest.mark.parametrize("linear_solver", [DenseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver])
 @pytest.mark.parametrize("newmark", [NewmarkExplicit, NewmarkImplicitForce])
 def test_newmark_dense(setup_module, linear_solver, newmark):
@@ -210,10 +268,10 @@ def test_newmark_two_stages(setup_module, linear_solver, preconditioner, newmark
     res = newmark(Force(), State(), linear_solver=linear_solver(), preconditioner=prec)
     res.initialise(number_eq, time)
     # run first stage
-    res.state.update(turning_idxs[0])
+    res.state.update_initial_conditions(turning_idxs[0])
     res.calculate(M, C, K, F, turning_idxs[0], turning_idxs[1])
     # run second stage
-    res.state.update(turning_idxs[1])
+    res.state.update_initial_conditions(turning_idxs[1])
     res.calculate(M, C, K, F, turning_idxs[1], len(time) - 1)
 
     # check solution stage 1

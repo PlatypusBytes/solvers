@@ -149,7 +149,7 @@ def test_zhai_sparse_two_stages(setup_module, linear_solver, preconditioner):
     res = NewmarkExplicit(Force(), State(), linear_solver=linear_solver(), preconditioner=prec)
     res.initialise(number_eq, time)
     res.calculate(M, C, K, F, 0, n_steps // 2)
-    res.state.update(n_steps // 2)
+    res.state.update_initial_conditions(n_steps // 2)
     res.calculate(M, C, K, F, n_steps // 2, n_steps)
 
 
@@ -157,7 +157,7 @@ def test_zhai_sparse_two_stages(setup_module, linear_solver, preconditioner):
     res_2 = ZhaiSolver(Force(), State(), linear_solver=linear_solver(), preconditioner=prec)
     res_2.initialise(number_eq, time)
     res_2.calculate(M, C, K, F, 0, n_steps // 2)
-    res_2.state.update(n_steps // 2)
+    res_2.state.update_initial_conditions(n_steps // 2)
     res_2.calculate(M, C, K, F, n_steps // 2, n_steps)
 
     # assert

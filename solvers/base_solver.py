@@ -163,7 +163,7 @@ class State:
         self.f[match[0]] = f
         self.F_out[match[0]] = F
 
-    def update(self, t_start_idx: int):
+    def update_initial_conditions(self, t_start_idx: int):
         """
         Updates the stage on a certain stage.
         Initial conditions are retrieved from previously calculated values for
@@ -176,6 +176,38 @@ class State:
 
         self.u0 = self.u[output_time_idx, :]
         self.v0 = self.v[output_time_idx, :]
+
+    def update_output_arrays(self, t_start_idx: int, t_end_idx: int):
+        """
+        Updates output arrays.
+        If either the t_start_idx or t_end_idx is missing in the output indices array, these indices are added.
+
+        Args:
+            t_start_idx (int): start time index of current stage
+            t_end_idx (int): end time index of current stage
+        """
+
+        # add start time index if required
+        if t_start_idx not in self.output_time_indices:
+            closest_greater_index = np.where(self.output_time_indices[self.output_time_indices >t_start_idx].min() == self.output_time_indices)[0]
+            self.output_time_indices = np.insert(self.output_time_indices, closest_greater_index, t_start_idx)
+            self.u = np.insert(self.u, closest_greater_index, np.zeros(self.u.shape[1]), axis=0)
+            self.v = np.insert(self.v, closest_greater_index, np.zeros(self.v.shape[1]), axis=0)
+            self.a = np.insert(self.a, closest_greater_index, np.zeros(self.a.shape[1]), axis=0)
+            self.f = np.insert(self.f, closest_greater_index, np.zeros(self.f.shape[1]), axis=0)
+            self.F_out = np.insert(self.F_out, closest_greater_index, np.zeros(self.F_out.shape[1]), axis=0)
+            self.output_time = np.insert(self.output_time, closest_greater_index, self.time[t_start_idx])
+
+        # add end time index if required
+        if t_end_idx not in self.output_time_indices:
+            closest_greater_index = np.where(self.output_time_indices[self.output_time_indices >t_end_idx].min() == self.output_time_indices)[0]
+            self.output_time_indices = np.insert(self.output_time_indices, closest_greater_index, t_end_idx)
+            self.u = np.insert(self.u, closest_greater_index, np.zeros(self.u.shape[1]), axis=0)
+            self.v = np.insert(self.v, closest_greater_index, np.zeros(self.v.shape[1]), axis=0)
+            self.a = np.insert(self.a, closest_greater_index, np.zeros(self.a.shape[1]), axis=0)
+            self.f = np.insert(self.f, closest_greater_index, np.zeros(self.f.shape[1]), axis=0)
+            self.F_out = np.insert(self.F_out, closest_greater_index, np.zeros(self.F_out.shape[1]), axis=0)
+            self.output_time = np.insert(self.output_time, closest_greater_index, self.time[t_end_idx])
 
 
 class Force:
@@ -313,7 +345,6 @@ class Force:
         if diff.size > 0:
             if not np.all(np.isclose(diff, diff[0])):
                 raise ValueError("Time steps differ in current stage")
-
 
 def calculate_initial_acceleration(m_global: Matrix,
                                    c_global: Matrix,

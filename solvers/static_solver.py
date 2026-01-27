@@ -54,10 +54,13 @@ class StaticSolver(BaseSolverABC):
             F_ini (Optional[Matrix], optional): Initial external force matrix. Defaults to None.
         """
 
+        # initialize force for the stage
         self.force.initialise_stage(F)
-
         # validate force input
         self.force.validate_input(t_start_idx, t_end_idx, self.state.time, self.force.force_matrix)
+
+        # update output arrays for the stage
+        self.state.update_output_arrays(t_start_idx, t_end_idx)
 
         # initial conditions u
         u = self.state.u0

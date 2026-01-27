@@ -66,13 +66,16 @@ class BatheSolver(BaseSolverABC):
         :param t_end_idx: time index of end time for the analysis
         """
 
+        # initialize force for the stage
         self.force.initialise_stage(F)
+        # validate force input
+        self.force.validate_input(t_start_idx, t_end_idx, self.state.time, self.force.force_matrix)
+
+        # update output arrays for the stage
+        self.state.update_output_arrays(t_start_idx, t_end_idx)
 
         # check if sparse calculation should be performed
         M, C, K = self.state.check_for_sparse(M, C, K)
-
-        # validate force input
-        self.force.validate_input(t_start_idx, t_end_idx, self.state.time, self.force.force_matrix)
 
         # calculate step size
         t_step = (self.state.time[t_end_idx] - self.state.time[t_start_idx]) / (t_end_idx - t_start_idx)
@@ -87,12 +90,6 @@ class BatheSolver(BaseSolverABC):
             # Lumping only applies to the mass matrix the damping matrix remain consistent
             M_diag = self.lump_method.apply(M)
             inv_M_diag = 1 / M_diag
-        # else:
-        #     # inverse mass matrix
-        #     if self._is_sparse_calculation:
-        #         inv_M = sp_inv(M).tocsc()
-        #     else:
-        #         inv_M = inv(M)
 
         # compute constants
         q1 = (1. - 2 * self._p) / (2 * self._p * (1 - self._p))

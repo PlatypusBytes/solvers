@@ -42,34 +42,6 @@ class CentralDifferenceSolver(BaseSolverABC):
         self._is_sparse_calculation = False
         self.type = TimeIntegrationType.DYNAMIC
 
-    @property
-    def u(self) -> np.ndarray:
-        """
-        Dynamic accessor for displacement results from state.
-        """
-        return self.state.u
-
-    @property
-    def v(self) -> np.ndarray:
-        """
-        Dynamic accessor for velocity results from state.
-        """
-        return self.state.v
-
-    @property
-    def a(self) -> np.ndarray:
-        """
-        Dynamic accessor for acceleration results from state.
-        """
-        return self.state.a
-
-    @property
-    def time(self) -> np.ndarray:
-        """
-        Dynamic accessor for time results from state.
-        """
-        return self.state.time
-
     def initialise(self, number_eq: int, time: npt.NDArray[np.float64]):
         """
         Initialise solver state for the provided number of equations and time vector.
@@ -109,8 +81,14 @@ class CentralDifferenceSolver(BaseSolverABC):
             t_start_idx (int): Start time index
             t_end_idx (int): End time index
         """
+
+        # initialize force for the stage
         self.force.initialise_stage(F)
+        # validate force input
         self.force.validate_input(t_start_idx, t_end_idx, self.state.time, self.force.force_matrix)
+
+        # update output arrays for the stage
+        self.state.update_output_arrays(t_start_idx, t_end_idx)
 
         t_step = (self.state.time[t_end_idx] - self.state.time[t_start_idx]) / (t_end_idx - t_start_idx)
 

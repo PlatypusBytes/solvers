@@ -221,10 +221,10 @@ def test_hht_two_stages(setup_module, linear_solver, preconditioner, hht):
     res = hht(Force(), State(), linear_solver=linear_solver(), preconditioner=prec, alpha=0)
     res.initialise(number_eq, time)
     # run first stage
-    res.state.update(turning_idxs[0])
+    res.state.update_initial_conditions(turning_idxs[0])
     res.calculate(M, C, K, F, turning_idxs[0], turning_idxs[1])
     # run second stage
-    res.state.update(turning_idxs[1])
+    res.state.update_initial_conditions(turning_idxs[1])
     res.calculate(M, C, K, F, turning_idxs[1], len(time) - 1)
 
     # check solution stage 1

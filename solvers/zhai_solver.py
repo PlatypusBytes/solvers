@@ -36,26 +36,6 @@ class ZhaiSolver(BaseSolverABC):
         self.gamma = 1/2
         self.type = TimeIntegrationType.DYNAMIC
 
-    # def calculate_initial_values(self, M, C, K, F, u0, v0):
-    #     """
-    #     Calculate inverse mass matrix and initial acceleration
-
-    #     :param M: global mass matrix
-    #     :param C: global damping matrix
-    #     :param K: global stiffness matrix
-    #     :param F: global force vector at current time step
-    #     :param u0: initial displacement
-    #     :param v0:  initial velocity
-    #     :return:
-    #     """
-    #     if self._is_sparse_calculation:
-    #         inv_M = sp_inv(M).tocsr()
-    #     else:
-    #         inv_M = inv(M)
-
-    #     a0 = self.evaluate_acceleration(inv_M, C, K, F, u0, v0)
-    #     return inv_M, a0
-
     def initialise(self, number_eq: int, time: npt.NDArray[np.float64]):
         """
         Initialise the solver state.
@@ -65,24 +45,6 @@ class ZhaiSolver(BaseSolverABC):
             time (npt.NDArray[np.float64]): Time array
         """
         self.state.initialise(number_eq, time)
-
-    # def calculate_force(self, u, t):
-    #     """
-    #     Calculate external force if a load function is given. If no load function is given, force is taken from current
-    #     load vector
-
-    #     :param u: displacement at time t
-    #     :param F: External force matrix
-    #     :param t: current time step
-    #     :return:
-    #     """
-
-    #     # calculates force with custom load function
-    #     self.update_rhs_at_non_linear_iteration(t, u=u)
-
-    #     force = self.F
-
-    #     return force
 
     def prediction(self, u, v, a, a_old, dt, is_initial):
         """
@@ -108,22 +70,6 @@ class ZhaiSolver(BaseSolverABC):
         u_new = u + v * dt + (1/2 + psi) * a * dt ** 2 - psi * a_old * dt**2
         v_new = v + (1 + phi) * a * dt - phi * a_old * dt
         return u_new, v_new
-
-    # @staticmethod
-    # def evaluate_acceleration(inv_M, C, K, F, u, v):
-    #     """
-    #     Calculate acceleration
-
-    #     :param inv_M: inverse global mass matrix
-    #     :param C: global damping matrix
-    #     :param K: Global stiffness matrix
-    #     :param F: Force vector at current time step
-    #     :param u: displacement
-    #     :param v: velocity
-    #     :return:
-    #     """
-    #     a_new = inv_M.dot(F - K.dot(u) - C.dot(v))
-    #     return a_new
 
     def newmark_iteration(self, u: npt.NDArray[np.float64],
                           v: npt.NDArray[np.float64],
@@ -159,13 +105,16 @@ class ZhaiSolver(BaseSolverABC):
             t_end_idx (int): time index of end time for the stage analysis
         """
 
+        # initialize force for the stage
         self.force.initialise_stage(F)
+        # validate force input
+        self.force.validate_input(t_start_idx, t_end_idx, self.state.time, self.force.force_matrix)
+
+        # update output arrays for the stage
+        self.state.update_output_arrays(t_start_idx, t_end_idx)
 
         # check if sparse calculation should be performed
         M, C, K = self.state.check_for_sparse(M, C, K)
-
-        # validate input
-        self.force.validate_input(t_start_idx, t_end_idx, self.state.time, self.force.force_matrix)
 
         # calculate time step size
         t_step = (self.state.time[t_end_idx] - self.state.time[t_start_idx]) / (
@@ -180,7 +129,6 @@ class ZhaiSolver(BaseSolverABC):
         # get initial displacement, velocity, acceleration and inverse mass matrix
         u = self.state.u0
         v = self.state.v0
-        # inv_M, a = calculate_initial_acceleration(M, C, K, force, u, v)
         a = calculate_initial_acceleration(M, C, K, force, u, v, self.linear_solver, self.preconditioner)
 
         output_time_idx = np.where(self.state.output_time_indices == t_start_idx)[0][0]
@@ -210,21 +158,17 @@ class ZhaiSolver(BaseSolverABC):
             u_new, v_new = self.prediction(u, v, a, a_old, t_step, is_initial)
 
             # Calculate predicted external force vector
-            # force = self.calculate_force(u_new, t)
             self.force.update_rhs_at_non_linear_iteration(t, u=u_new)
 
             # Calculate predicted acceleration
-            # a_new = self.evaluate_acceleration(inv_M, C, K, force, u_new, v_new)
             a_new = self.linear_solver.solve(M, self.force.F - K.dot(u_new) - C.dot(v_new))
             # Correct displacement and velocity
             u_new, v_new = self.newmark_iteration(u, v, a, a_new, t_step)
 
             # Calculate corrected force vector
-            # force = self.calculate_force(u_new, t)
             self.force.update_rhs_at_non_linear_iteration(t, u=u_new)
 
             # Calculate corrected acceleration
-            # a_new = self.evaluate_acceleration(inv_M, C, K, force, u_new, v_new)
             a_new = self.linear_solver.solve(M, self.force.F - K.dot(u_new) - C.dot(v_new))
 
             # add to results
