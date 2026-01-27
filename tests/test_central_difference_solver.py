@@ -8,8 +8,6 @@ from solvers.utils import LumpingMethod
 from tests.utils import set_matrices_as_sparse, set_matrices_as_np_array
 from solvers.linear_equations_solvers import SparseDirectSolver, DenseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver
 from solvers.preconditioners import JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner
-from solvers.newmark_solver import NewmarkExplicit, NewmarkImplicitForce, calculate_initial_acceleration
-
 
 
 @pytest.fixture

@@ -1,23 +1,21 @@
 import numpy as np
-from numpy.linalg import inv
 from scipy.sparse import diags, issparse
-from scipy.sparse.linalg import inv as sp_inv
 from tqdm import tqdm
 
 from solvers.utils import LumpingMethod
-from solvers.base_solver import Force, State, Matrix
+from solvers.base_solver import BaseSolverABC, Force, State, Matrix
 from solvers.preconditioners import PreconditionerABC
-from solvers.linear_equations_solvers import SolversABC, SparseDirectSolver
+from solvers.linear_equations_solvers import LinearSolversABC, SparseDirectSolver
 
 
-class CentralDifferenceSolver:
+class CentralDifferenceSolver(BaseSolverABC):
     """
     Explicit central difference solver following the :cite:p:`Bathe_1996` formulation.
     """
     def __init__(self,
                  force: Force,
                  state: State,
-                 linear_solver: SolversABC = SparseDirectSolver(),
+                 linear_solver: LinearSolversABC = SparseDirectSolver(),
                  preconditioner: PreconditionerABC = None,
                  lumping_method: LumpingMethod = LumpingMethod.RowSum):
         """
@@ -26,7 +24,7 @@ class CentralDifferenceSolver:
         Args:
             force (Force): Force class containing the force definitions
             state (State): State class containing the state
-            linear_solver (SolversABC): Linear solver to be used (default: SparseDirectSolver)
+            linear_solver (LinearSolversABC): Linear solver to be used (default: SparseDirectSolver)
             preconditioner (PreconditionerABC): Preconditioner to be used (default: None)
             lumping_method (LumpingMethod): Lumping method to be used (default: RowSum)
         """

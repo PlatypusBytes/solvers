@@ -168,3 +168,17 @@ class TestBaseSolver(unittest.TestCase):
         # assert
         np.testing.assert_array_almost_equal(expected_displacement, res_2.u)
 
+
+@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver])
+@pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
+def test_initial_acceleration(setup_module, linear_solver, preconditioner):
+
+    M, K, C, F, _, _, number_eq = setup_module
+    M, K, C, F = set_matrices_as_sparse(M, K, C, F)
+
+    prec = preconditioner() if preconditioner is not None else None
+
+    acc = calculate_initial_acceleration(M, C, K, F[:, 0].toarray()[:, 0],
+                                        np.zeros(number_eq), np.zeros(number_eq),
+                                        linear_solver(), prec)
+    np.testing.assert_array_equal(acc, np.array([0, 10]))

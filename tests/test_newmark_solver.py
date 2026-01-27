@@ -1,12 +1,9 @@
-# unit test for solver
-# tests based on Bathe
-# for newmark pg 782
 import pytest
 
 from solvers.base_solver import Force, State
 from solvers.linear_equations_solvers import SparseDirectSolver, DenseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver
 from solvers.preconditioners import JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner
-from solvers.newmark_solver import NewmarkExplicit, NewmarkImplicitForce, calculate_initial_acceleration
+from solvers.newmark_solver import NewmarkExplicit, NewmarkImplicitForce
 
 from tests.utils import *
 
@@ -46,20 +43,6 @@ def setup_module():
 
     number_eq = 2
     return M, K, C, F, n_steps, time, number_eq
-
-@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver])
-@pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
-def test_initial_acceleration(setup_module, linear_solver, preconditioner):
-
-    M, K, C, F, _, _, number_eq = setup_module
-    M, K, C, F = set_matrices_as_sparse(M, K, C, F)
-
-    prec = preconditioner() if preconditioner is not None else None
-
-    acc = calculate_initial_acceleration(M, C, K, F[:, 0].toarray()[:, 0],
-                                        np.zeros(number_eq), np.zeros(number_eq),
-                                        linear_solver(), prec)
-    np.testing.assert_array_equal(acc, np.array([0, 10]))
 
 
 @pytest.mark.parametrize("linear_solver", [SparseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver])
@@ -157,6 +140,12 @@ def test_newmark_dense(setup_module, linear_solver, newmark):
 def test_newmark_two_stages(setup_module, linear_solver, preconditioner, newmark):
     """
     Test newmark solver with 2 stages, where the different stages have different time steps.
+
+    Args:
+        setup_module: fixture that sets up matrices and parameters
+        linear_solver: linear solver class to use
+        preconditioner: preconditioner class to use
+        newmark: Newmark solver class to test
     """
 
     M, K, C, F, _, time, number_eq = setup_module

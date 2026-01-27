@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from typing import Union, Optional, TypeAlias
 
 import numpy as np
@@ -5,10 +6,67 @@ import numpy.typing as npt
 import scipy.sparse as sp
 from scipy.sparse import issparse, csc_matrix
 
+from solvers.linear_equations_solvers import LinearSolversABC
+from solvers.preconditioners import PreconditionerABC
+
 
 # Define a custom type alias for readability
 Matrix: TypeAlias = Union[npt.NDArray[np.float64], sp.spmatrix]
 
+
+class BaseSolverABC(ABC):
+    """
+    Abstract base class for Newmark solvers.
+    """
+    @abstractmethod
+    def calculate(self, M: Matrix, C: Matrix, K: Matrix, F: Matrix, t_start_idx: int, t_end_idx: int):
+        """
+        Abstract method to perform the calculation of the solver.
+
+        Args:
+            M (Matrix): Mass matrix.
+            C (Matrix): Damping matrix.
+            K (Matrix): Stiffness matrix.
+            F (Matrix): External force matrix.
+            t_start_idx (int): Start time index for the calculation.
+            t_end_idx (int): End time index for the calculation.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @property
+    def u(self):
+        """
+        Dynamic accessor for displacement results from state.
+        """
+        return self.state.u
+
+    @property
+    def v(self):
+        """
+        Dynamic accessor for velocity results from state.
+        """
+        return self.state.v
+
+    @property
+    def a(self):
+        """
+        Dynamic accessor for acceleration results from state.
+        """
+        return self.state.a
+
+    @property
+    def time(self):
+        """
+        Dynamic accessor for time array from state.
+        """
+        return self.state.time
+
+    @property
+    def f(self):
+        """
+        Dynamic accessor for nodal force results from state.
+        """
+        return self.state.f
 
 class State:
     """
@@ -258,3 +316,40 @@ class Force:
         if diff.size > 0:
             if not np.all(np.isclose(diff, diff[0])):
                 raise ValueError("Time steps differ in current stage")
+
+
+def calculate_initial_acceleration(m_global: Matrix,
+                                   c_global: Matrix,
+                                   k_global: Matrix,
+                                   force_ini: npt.NDArray[np.float64],
+                                   u: npt.NDArray[np.float64],
+                                   v: npt.NDArray[np.float64],
+                                   linear_solver: LinearSolversABC,
+                                   preconditioner: PreconditionerABC) -> npt.NDArray[np.float64]:
+    r"""
+    Calculation of the initial conditions - acceleration for the first time-step.
+
+    Args:
+        m_global (Matrix): Global mass matrix
+        c_global (Matrix): Global damping matrix
+        k_global (Matrix): Global stiffness matrix
+        force_ini (npt.NDArray[np.float64]): Initial force
+        u (npt.NDArray[np.float64]): Initial conditions - displacement
+        v (npt.NDArray[np.float64]): Initial conditions - velocity
+        linear_solver (SolversABC): Linear solver instance to solve the linear system
+        preconditioner (PreconditionerABC): Preconditioner instance to be used in the linear solver
+    Returns:
+        a (npt.NDArray[np.float64]): Initial acceleration
+    """
+
+    k_part = k_global.dot(u)
+    c_part = c_global.dot(v)
+
+    if preconditioner is not None:
+        pre_c = preconditioner.build(m_global)
+    else:
+        pre_c = None
+
+    # initial acceleration
+    a = linear_solver.solve(m_global, force_ini - c_part - k_part, M=pre_c)
+    return a

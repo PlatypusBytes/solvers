@@ -4,57 +4,13 @@ import numpy as np
 import numpy.typing as npt
 from tqdm import tqdm
 
-from solvers.linear_equations_solvers import SolversABC, SparseDirectSolver
+from solvers.linear_equations_solvers import LinearSolversABC, SparseDirectSolver
 from solvers.preconditioners import PreconditionerABC
-from solvers.base_solver import Force, State, Matrix
+from solvers.base_solver import BaseSolverABC, Force, State, Matrix, calculate_initial_acceleration
 from solvers.utils import eigen_decomposition
 
 
-class NewmarkSolverABC(ABC):
-    """
-    Abstract base class for Newmark solvers.
-    """
-    @abstractmethod
-    def calculate(self, M: Matrix, C: Matrix, K: Matrix, F: Matrix, t_start_idx: int, t_end_idx: int) -> None:
-        raise NotImplementedError("Subclasses must implement this method")
-
-    @property
-    def u(self):
-        """
-        Dynamic accessor for displacement results from state.
-        """
-        return self.state.u
-
-    @property
-    def v(self):
-        """
-        Dynamic accessor for velocity results from state.
-        """
-        return self.state.v
-
-    @property
-    def a(self):
-        """
-        Dynamic accessor for acceleration results from state.
-        """
-        return self.state.a
-
-    @property
-    def time(self):
-        """
-        Dynamic accessor for time array from state.
-        """
-        return self.state.time
-
-    @property
-    def f(self):
-        """
-        Dynamic accessor for nodal force results from state.
-        """
-        return self.state.f
-
-
-class NewmarkImplicitForce(NewmarkSolverABC):
+class NewmarkImplicitForce(BaseSolverABC):
     """
     Implicit Newmark Solver class.
     """
@@ -63,7 +19,7 @@ class NewmarkImplicitForce(NewmarkSolverABC):
                  state: State,
                  beta: float = 0.25,
                  gamma: float = 0.5,
-                 linear_solver: SolversABC = SparseDirectSolver(),
+                 linear_solver: LinearSolversABC = SparseDirectSolver(),
                  preconditioner: PreconditionerABC = None,
                  max_iter: int = 15,
                  tolerance: float = 1e-5):
@@ -75,7 +31,7 @@ class NewmarkImplicitForce(NewmarkSolverABC):
             state (State): State class containing the state
             beta (float): Newmark numerical stability parameter (default: 0.25)
             gamma (float): Newmark numerical stability parameter (default: 0.5)
-            linear_solver (SolversABC): Linear solver to be used (default: SparseDirectSolver)
+            linear_solver (LinearSolversABC): Linear solver to be used (default: SparseDirectSolver)
             preconditioner (PreconditionerABC): Preconditioner to be used (default: None)
             max_iter (int): Maximum number of iterations for the Newton-Raphson scheme (default: 15)
             tolerance (float): Tolerance for convergence in the Newton-Raphson scheme (default: 1e-5)
@@ -123,7 +79,7 @@ class NewmarkImplicitForce(NewmarkSolverABC):
         self.force.validate_input(t_start_idx, t_end_idx, self.state.time, self.force.force_matrix)
 
         # calculate time step size
-        t_step = (self.time[t_end_idx] - self.time[t_start_idx]) / (
+        t_step = (self.state.time[t_end_idx] - self.state.time[t_start_idx]) / (
             (t_end_idx - t_start_idx))
 
         # constants for the Newmark integration
@@ -250,7 +206,7 @@ class NewmarkImplicitForce(NewmarkSolverABC):
         pbar.close()
 
 
-class NewmarkExplicit(NewmarkSolverABC):
+class NewmarkExplicit(BaseSolverABC):
     """
     Explicit Newmark Solver class.
     """
@@ -259,7 +215,7 @@ class NewmarkExplicit(NewmarkSolverABC):
                  state: State,
                  beta: float = 0.25,
                  gamma: float = 0.5,
-                 linear_solver: SolversABC = SparseDirectSolver,
+                 linear_solver: LinearSolversABC = SparseDirectSolver(),
                  preconditioner: PreconditionerABC = None):
         """
         Constructor of the Explicit Newmark Solver.
@@ -269,7 +225,7 @@ class NewmarkExplicit(NewmarkSolverABC):
             state (State): State class containing the state
             beta (float): Newmark numerical stability parameter (default: 0.25)
             gamma (float): Newmark numerical stability parameter (default: 0.5)
-            linear_solver (SolversABC): Linear solver to be used (default: SparseDirectSolver)
+            linear_solver (LinearSolversABC): Linear solver to be used (default: SparseDirectSolver)
             preconditioner (PreconditionerABC): Preconditioner to be used (default: None)
         """
         self.beta = beta
@@ -405,7 +361,7 @@ class NewmarkExplicit(NewmarkSolverABC):
         # close the progress bar
         pbar.close()
 
-class ModalAnalysisNewmark(NewmarkSolverABC):
+class ModalAnalysisNewmark(BaseSolverABC):
 
     def calculate(self, M, C, K, F, t_start_idx, t_end_idx):
         """
@@ -560,40 +516,3 @@ class ModalAnalysisNewmark(NewmarkSolverABC):
 
                 self.F_out[t2, :] = np.copy(self.F)
                 t2 += 1
-
-
-def calculate_initial_acceleration(m_global: Matrix,
-                                   c_global: Matrix,
-                                   k_global: Matrix,
-                                   force_ini: npt.NDArray[np.float64],
-                                   u: npt.NDArray[np.float64],
-                                   v: npt.NDArray[np.float64],
-                                   linear_solver: SolversABC,
-                                   preconditioner: PreconditionerABC) -> npt.NDArray[np.float64]:
-    r"""
-    Calculation of the initial conditions - acceleration for the first time-step.
-
-    Args:
-        m_global (Matrix): Global mass matrix
-        c_global (Matrix): Global damping matrix
-        k_global (Matrix): Global stiffness matrix
-        force_ini (npt.NDArray[np.float64]): Initial force
-        u (npt.NDArray[np.float64]): Initial conditions - displacement
-        v (npt.NDArray[np.float64]): Initial conditions - velocity
-        linear_solver (SolversABC): Linear solver instance to solve the linear system
-        preconditioner (PreconditionerABC): Preconditioner instance to be used in the linear solver
-    Returns:
-        a (npt.NDArray[np.float64]): Initial acceleration
-    """
-
-    k_part = k_global.dot(u)
-    c_part = c_global.dot(v)
-
-    if preconditioner is not None:
-        pre_c = preconditioner.build(m_global)
-    else:
-        pre_c = None
-
-    # initial acceleration
-    a = linear_solver.solve(m_global, force_ini - c_part - k_part, M=pre_c)
-    return a

@@ -10,7 +10,7 @@ from scipy.sparse.linalg import bicgstab, cg, spsolve, gmres
 from solvers.preconditioners import PreconditionerABC
 
 
-class SolversABC(ABC):
+class LinearSolversABC(ABC):
     """
     Abstract base class for solvers
     """
@@ -42,7 +42,7 @@ class SolversABC(ABC):
         raise NotImplementedError("Subclasses should implement this!")
 
 
-class DenseDirectSolver(SolversABC):
+class DenseDirectSolver(LinearSolversABC):
     """
     Direct dense solver using numpy.linalg.inv
 
@@ -92,7 +92,7 @@ class DenseDirectSolver(SolversABC):
         return x
 
 
-class SparseDirectSolver(SolversABC):
+class SparseDirectSolver(LinearSolversABC):
     """
     Sparse Direct Solver using scipy.sparse.linalg.spsolve
     """
@@ -132,7 +132,7 @@ class SparseDirectSolver(SolversABC):
         return x
 
 
-class CGSolver(SolversABC):
+class CGSolver(LinearSolversABC):
     """
     Conjugate Gradient Solver
     """
@@ -173,7 +173,7 @@ class CGSolver(SolversABC):
         return x
 
 
-class GMRESSolver(SolversABC):
+class GMRESSolver(LinearSolversABC):
     """
     Generalized Minimal Residual (GMRES) Solver
     """
@@ -213,7 +213,7 @@ class GMRESSolver(SolversABC):
             raise RuntimeError(f"GMRES did not converge (info={info})")
         return x
 
-class BICSTABSolver(SolversABC):
+class BICSTABSolver(LinearSolversABC):
     """
     Biconjugate Gradient Stabilized (BiCGSTAB) Solver
     """
