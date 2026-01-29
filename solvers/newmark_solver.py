@@ -2,7 +2,7 @@ import numpy as np
 import numpy.typing as npt
 from tqdm import tqdm
 
-from solvers.linear_equations_solvers import LinearSolversABC, SparseDirectSolver
+from solvers.linear_equations_solvers import LinearSolversABC, SparseDirectSolverInv
 from solvers.preconditioners import PreconditionerABC
 from solvers.base_solver import BaseSolverABC, Force, State, Matrix, calculate_initial_acceleration, TimeIntegrationType
 
@@ -16,7 +16,7 @@ class NewmarkImplicitForce(BaseSolverABC):
                  state: State = State(),
                  beta: float = 0.25,
                  gamma: float = 0.5,
-                 linear_solver: LinearSolversABC = SparseDirectSolver(),
+                 linear_solver: LinearSolversABC = SparseDirectSolverInv(),
                  preconditioner: PreconditionerABC = None,
                  max_iter: int = 15,
                  tolerance: float = 1e-5
@@ -217,7 +217,7 @@ class NewmarkExplicit(BaseSolverABC):
                  state: State = State(),
                  beta: float = 0.25,
                  gamma: float = 0.5,
-                 linear_solver: LinearSolversABC = SparseDirectSolver(),
+                 linear_solver: LinearSolversABC = SparseDirectSolverInv(),
                  preconditioner: PreconditionerABC = None):
         """
         Constructor of the Explicit Newmark Solver.

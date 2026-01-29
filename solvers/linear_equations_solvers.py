@@ -72,8 +72,6 @@ class DenseDirectSolver(LinearSolversABC):
             The right-hand side vector.
         M : LinearOperator, optional
             Preconditioner (only for iterative solvers).
-        cache : bool, optional
-            Whether to cache factorization for repeated timesteps (only for direct solvers).
 
         Returns
         -------
@@ -85,12 +83,56 @@ class DenseDirectSolver(LinearSolversABC):
             warnings.warn("Preconditioner is ignored in DenseDirectSolver")
 
         # identity-based cache: cache LU factorization if A is the same as last time
-        if id(A) != self._A_id:
+        if get_numpy_fingerprint(A) != self._A_id:
             self._lu, self._piv = lu_factor(A)
-            self._A_id = id(A)
+            self._A_id = get_numpy_fingerprint(A)
         x = lu_solve((self._lu, self._piv), b)
         return x
 
+
+class SparseDirectSolverInv(LinearSolversABC):
+    """
+    Sparse Direct Solver using scipy.sparse.linalg.spsolve
+    """
+    def __init__(self):
+        """
+        Initializes the Sparse Direct solver.
+        """
+        self._inverse_A = None
+        self._A_id = None
+
+    def solve(self,
+              A: sp.spmatrix,
+              b: npt.NDArray[np.float64],
+              M: Optional[PreconditionerABC] = None,
+              ) -> npt.NDArray[np.float64]:
+        """
+        Solve Ax = b using using direct inversion.
+
+        Parameters
+        ----------
+        A : np.ndarray or scipy.sparse matrix
+            The system matrix.
+        b : np.ndarray
+            The right-hand side vector.
+        M : LinearOperator, optional
+            Preconditioner (only for iterative solvers).
+
+        Returns
+        -------
+        x : np.ndarray
+            The solution vector.
+        """
+        if M is not None:
+            warnings.warn("Preconditioner is ignored in SparseDirectSolver")
+
+        # identity-based cache: cache inv A if A is the same as last time
+        if get_sparse_fingerprint(A) != self._A_id:
+            self._inverse_A = sp.linalg.splu(A)
+            self._A_id = get_sparse_fingerprint(A)
+
+        x = self._inverse_A.solve(b)
+        return x
 
 class SparseDirectSolver(LinearSolversABC):
     """
@@ -118,8 +160,6 @@ class SparseDirectSolver(LinearSolversABC):
             The right-hand side vector.
         M : LinearOperator, optional
             Preconditioner (only for iterative solvers).
-        cache : bool, optional
-            Whether to cache factorization for repeated timesteps (only for direct solvers).
 
         Returns
         -------
@@ -159,8 +199,6 @@ class CGSolver(LinearSolversABC):
             The right-hand side vector.
         M : LinearOperator, optional
             Preconditioner (only for iterative solvers).
-        cache : bool, optional
-            Whether to cache factorization for repeated timesteps (only for direct solvers).
 
         Returns
         -------
@@ -200,8 +238,6 @@ class GMRESSolver(LinearSolversABC):
             The right-hand side vector.
         M : LinearOperator, optional
             Preconditioner (only for iterative solvers).
-        cache : bool, optional
-            Whether to cache factorization for repeated timesteps (only for direct solvers).
 
         Returns
         -------
@@ -240,8 +276,6 @@ class BICSTABSolver(LinearSolversABC):
             The right-hand side vector.
         M : LinearOperator, optional
             Preconditioner (only for iterative solvers).
-        cache : bool, optional
-            Whether to cache factorization for repeated timesteps (only for direct solvers).
 
         Returns
         -------
@@ -252,3 +286,38 @@ class BICSTABSolver(LinearSolversABC):
         if info != 0:
             raise RuntimeError(f"BiCGSTAB did not converge (info={info})")
         return x
+
+
+def get_sparse_fingerprint(A: sp.spmatrix) -> tuple:
+    """
+    Get a fingerprint of a sparse matrix A to identify it uniquely.
+
+    Args:
+        A (sp.spmatrix): The sparse matrix.
+    Returns:
+        tuple: A tuple containing the id, shape, number of non-zeros, and memory pointers of data and indices.
+    """
+    return (
+        id(A),
+        A.shape,
+        A.nnz,
+        A.data.ctypes.data,
+        A.indices.ctypes.data
+    )
+
+def get_numpy_fingerprint(A: npt.NDArray[np.float64]) -> tuple:
+    """
+    Get a fingerprint of a numpy array A to identify it uniquely.
+
+    Args:
+        A (np.ndarray): The numpy array.
+    Returns:
+        tuple: A tuple containing the id, shape, dtype, strides, and memory address of the first element.
+    """
+    return (
+        id(A),
+        A.shape,
+        A.dtype,
+        A.strides,
+        A.ctypes.data
+    )

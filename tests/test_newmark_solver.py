@@ -3,7 +3,8 @@ import numpy as np
 from scipy import sparse
 
 from solvers.base_solver import Force, State
-from solvers.linear_equations_solvers import SparseDirectSolver, DenseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver
+from solvers.linear_equations_solvers import (SparseDirectSolver, DenseDirectSolver, SparseDirectSolverInv,
+    CGSolver, GMRESSolver, BICSTABSolver)
 from solvers.preconditioners import JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner
 from solvers.newmark_solver import NewmarkExplicit, NewmarkImplicitForce
 
@@ -44,7 +45,7 @@ def setup_module():
     return M, K, C, F, n_steps, time, number_eq
 
 
-@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver])
+@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverInv, CGSolver, GMRESSolver, BICSTABSolver])
 @pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
 @pytest.mark.parametrize("newmark", [NewmarkExplicit, NewmarkImplicitForce])
 def test_newmark_sparse(setup_module, linear_solver, preconditioner, newmark):
@@ -91,7 +92,7 @@ def test_newmark_sparse(setup_module, linear_solver, preconditioner, newmark):
     )
 
 
-@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver])
+@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverInv, CGSolver, GMRESSolver, BICSTABSolver])
 @pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
 @pytest.mark.parametrize("newmark", [NewmarkExplicit, NewmarkImplicitForce])
 def test_newmark_sparse_output_int(setup_module, linear_solver, preconditioner, newmark):
@@ -128,7 +129,7 @@ def test_newmark_sparse_output_int(setup_module, linear_solver, preconditioner, 
     )
 
 
-@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver])
+@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverInv, CGSolver, GMRESSolver, BICSTABSolver])
 @pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
 @pytest.mark.parametrize("newmark", [NewmarkExplicit, NewmarkImplicitForce])
 def test_newmark_sparse_output_int_staged(setup_module, linear_solver, preconditioner, newmark):
@@ -227,7 +228,7 @@ def test_newmark_dense(setup_module, linear_solver, newmark):
         ),
     )
 
-@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver])
+@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverInv, CGSolver, GMRESSolver, BICSTABSolver])
 @pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
 @pytest.mark.parametrize("newmark", [NewmarkExplicit, NewmarkImplicitForce])
 def test_newmark_two_stages(setup_module, linear_solver, preconditioner, newmark):
@@ -268,10 +269,10 @@ def test_newmark_two_stages(setup_module, linear_solver, preconditioner, newmark
     res.initialise(number_eq, time)
     # run first stage
     res.state.update_initial_conditions(turning_idxs[0])
-    res.calculate(M, C, K, F, turning_idxs[0], turning_idxs[1])
+    res.calculate(M.copy(), C, K.copy(), F, turning_idxs[0], turning_idxs[1])
     # run second stage
     res.state.update_initial_conditions(turning_idxs[1])
-    res.calculate(M, C, K, F, turning_idxs[1], len(time) - 1)
+    res.calculate(M.copy(), C, K.copy(), F, turning_idxs[1], len(time) - 1)
 
     # check solution stage 1
     np.testing.assert_array_almost_equal(
@@ -309,7 +310,7 @@ def test_newmark_two_stages(setup_module, linear_solver, preconditioner, newmark
                                                                                         ))
 
 
-@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver])
+@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverInv, CGSolver, GMRESSolver, BICSTABSolver])
 @pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
 @pytest.mark.parametrize("newmark", [NewmarkExplicit, NewmarkImplicitForce])
 def test_newmark_static(setup_module, linear_solver, preconditioner, newmark):

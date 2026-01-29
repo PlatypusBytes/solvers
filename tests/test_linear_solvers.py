@@ -5,6 +5,7 @@ from scipy import sparse
 from solvers.linear_equations_solvers import (
     DenseDirectSolver,
     SparseDirectSolver,
+    SparseDirectSolverInv,
     CGSolver,
     GMRESSolver,
     BICSTABSolver,
@@ -29,7 +30,7 @@ def spd_system():
     A_sparse = sparse.csr_matrix(A)
     return A, A_sparse, b, x_exact
 
-@pytest.mark.parametrize("solver_cls", [DenseDirectSolver, SparseDirectSolver])
+@pytest.mark.parametrize("solver_cls", [DenseDirectSolver])
 def test_dense_direct_solver_solves_and_caches(spd_system, solver_cls):
     """
     Test that DenseDirectSolver correctly solves a SPD system and caches the matrix.
@@ -47,6 +48,23 @@ def test_dense_direct_solver_solves_and_caches(spd_system, solver_cls):
     with pytest.warns(UserWarning, match="Preconditioner is ignored"):
         solver.solve(A_dense, b, M=preconditioner)
 
+@pytest.mark.parametrize("solver_cls", [SparseDirectSolver, SparseDirectSolverInv])
+def test_sparse_direct_solver_solves_and_caches(spd_system, solver_cls):
+    """
+    Test that sparse linear solvers correctly solve a SPD system and cache the matrix.
+    Args:
+        spd_system: Fixture providing a SPD system
+        solver_cls: Solver class to test
+    """
+    _, A_sparse, b, x_expected = spd_system
+    solver = solver_cls()
+
+    x_first = solver.solve(A_sparse, b.copy())
+    np.testing.assert_allclose(x_first, x_expected)
+
+    preconditioner = JacobiPreconditioner().build(sparse.csc_matrix(A_sparse))
+    with pytest.warns(UserWarning, match="Preconditioner is ignored"):
+        solver.solve(A_sparse, b, M=preconditioner)
 
 @pytest.mark.parametrize("solver_cls", [CGSolver, GMRESSolver, BICSTABSolver])
 @pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])

@@ -3,7 +3,7 @@ import numpy.typing as npt
 from tqdm import tqdm
 
 from solvers.utils import LumpingMethod
-from solvers.linear_equations_solvers import LinearSolversABC, SparseDirectSolver
+from solvers.linear_equations_solvers import LinearSolversABC, SparseDirectSolverInv
 from solvers.preconditioners import PreconditionerABC
 from solvers.base_solver import BaseSolverABC, Force, State, Matrix, calculate_initial_acceleration, TimeIntegrationType
 
@@ -17,7 +17,7 @@ class BatheSolver(BaseSolverABC):
     def __init__(self,
                  force: Force = Force(),
                  state: State = State(),
-                 linear_solver: LinearSolversABC = SparseDirectSolver(),
+                 linear_solver: LinearSolversABC = SparseDirectSolverInv(),
                  preconditioner: PreconditionerABC = None,
                  lumping_method=LumpingMethod.RowSum
                  ):

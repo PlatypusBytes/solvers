@@ -6,7 +6,7 @@ from tqdm import tqdm
 from solvers.utils import LumpingMethod
 from solvers.base_solver import BaseSolverABC, Force, State, Matrix, TimeIntegrationType
 from solvers.preconditioners import PreconditionerABC
-from solvers.linear_equations_solvers import LinearSolversABC, SparseDirectSolver
+from solvers.linear_equations_solvers import LinearSolversABC, SparseDirectSolverInv
 
 
 class CentralDifferenceSolver(BaseSolverABC):
@@ -16,7 +16,7 @@ class CentralDifferenceSolver(BaseSolverABC):
     def __init__(self,
                  force: Force = Force(),
                  state: State = State(),
-                 linear_solver: LinearSolversABC = SparseDirectSolver(),
+                 linear_solver: LinearSolversABC = SparseDirectSolverInv(),
                  preconditioner: PreconditionerABC = None,
                  lumping_method: LumpingMethod = LumpingMethod.RowSum):
         """

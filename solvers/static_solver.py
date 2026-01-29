@@ -4,7 +4,7 @@ import numpy.typing as npt
 from scipy.sparse import issparse
 from tqdm import tqdm
 
-from solvers.linear_equations_solvers import LinearSolversABC, SparseDirectSolver
+from solvers.linear_equations_solvers import LinearSolversABC, SparseDirectSolverInv
 from solvers.preconditioners import PreconditionerABC
 from solvers.base_solver import BaseSolverABC, Force, State, Matrix, TimeIntegrationType
 
@@ -16,7 +16,7 @@ class StaticSolver(BaseSolverABC):
     def __init__(self,
                  force: Force = Force(),
                  state: State = State(),
-                 linear_solver: LinearSolversABC = SparseDirectSolver(),
+                 linear_solver: LinearSolversABC = SparseDirectSolverInv(),
                  preconditioner: PreconditionerABC = None):
         """
         Constructor of the Static Solver class.
