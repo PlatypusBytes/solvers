@@ -44,9 +44,8 @@ class LinearSolversABC(ABC):
 
 class DenseDirectSolver(LinearSolversABC):
     """
-    Direct dense solver using numpy.linalg.inv
-
-    It stores the LU factorization of A to speed up repeated solves with the same A.
+    Direct dense solver using LU factorization (scipy.linalg.lu_factor).
+    Caches the LU factorization to speed up repeated solves with the same A.
     """
     def __init__(self):
         """
@@ -89,8 +88,34 @@ class DenseDirectSolver(LinearSolversABC):
         x = lu_solve((self._lu, self._piv), b)
         return x
 
+    def __getstate__(self) -> dict:
+        """
+        Prepare the state for pickling.
+        This is needed for when doing deepcopy or pickling the solver.
 
-class SparseDirectSolverInv(LinearSolversABC):
+        Returns:
+            dict: The state dictionary without unpicklable entries.
+        """
+        state = self.__dict__.copy()
+        state["_A_id"] = None
+        state["_lu"] = None
+        state["_piv"] = None
+        return state
+
+    def __setstate__(self, state: dict):
+        """
+        Restore the state from pickling.
+        This is needed for when doing deepcopy or unpickling the solver.
+
+        Args:
+            state (dict): The state dictionary.
+        """
+        self.__dict__.update(state)
+        self._A_id = None
+        self._lu = None
+        self._piv = None
+
+class SparseDirectSolverLU(LinearSolversABC):
     """
     Sparse Direct Solver using scipy.sparse.linalg.spsolve
     """
@@ -124,7 +149,7 @@ class SparseDirectSolverInv(LinearSolversABC):
             The solution vector.
         """
         if M is not None:
-            warnings.warn("Preconditioner is ignored in SparseDirectSolver")
+            warnings.warn("Preconditioner is ignored in SparseDirectSolverLU")
 
         # identity-based cache: cache inv A if A is the same as last time
         if get_sparse_fingerprint(A) != self._A_id:
@@ -133,6 +158,34 @@ class SparseDirectSolverInv(LinearSolversABC):
 
         x = self._inverse_A.solve(b)
         return x
+
+    def __getstate__(self) -> dict:
+        """
+        Prepare the state for pickling.
+        This is needed for when doing deepcopy or pickling the solver.
+
+        Returns:
+            dict: The state dictionary without unpicklable entries.
+        """
+        state = self.__dict__.copy()
+        state["_inverse_A"] = None
+        state["_A_id"] = None
+        return state
+
+    def __setstate__(self, state: dict):
+        """
+        Restore the state from pickling.
+        This is needed for when doing deepcopy or unpickling the solver.
+
+        Args:
+            state (dict): The state dictionary.
+        """
+        self.__dict__.update(state)
+        self._inverse_A = None
+        self._A_id = None
+
+
+
 
 class SparseDirectSolver(LinearSolversABC):
     """

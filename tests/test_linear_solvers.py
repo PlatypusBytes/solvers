@@ -5,7 +5,7 @@ from scipy import sparse
 from solvers.linear_equations_solvers import (
     DenseDirectSolver,
     SparseDirectSolver,
-    SparseDirectSolverInv,
+    SparseDirectSolverLU,
     CGSolver,
     GMRESSolver,
     BICSTABSolver,
@@ -48,7 +48,7 @@ def test_dense_direct_solver_solves_and_caches(spd_system, solver_cls):
     with pytest.warns(UserWarning, match="Preconditioner is ignored"):
         solver.solve(A_dense, b, M=preconditioner)
 
-@pytest.mark.parametrize("solver_cls", [SparseDirectSolver, SparseDirectSolverInv])
+@pytest.mark.parametrize("solver_cls", [SparseDirectSolver, SparseDirectSolverLU])
 def test_sparse_direct_solver_solves_and_caches(spd_system, solver_cls):
     """
     Test that sparse linear solvers correctly solve a SPD system and cache the matrix.

@@ -7,7 +7,7 @@ from solvers.base_solver import Force, State
 from solvers.central_difference_solver import CentralDifferenceSolver
 from solvers.utils import LumpingMethod
 from tests.utils import set_matrices_as_sparse, set_matrices_as_np_array
-from solvers.linear_equations_solvers import (SparseDirectSolver, SparseDirectSolverInv, DenseDirectSolver,
+from solvers.linear_equations_solvers import (SparseDirectSolver, SparseDirectSolverLU, DenseDirectSolver,
     CGSolver, GMRESSolver, BICSTABSolver)
 from solvers.preconditioners import JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner
 
@@ -226,7 +226,7 @@ def test_full_solver_central_difference_lumped(central_difference_basic_setup, l
     run_central_difference_test(setup_data, lumped=True, linear_solver=linear_solver(), preconditioner=None)
 
 
-@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverInv, CGSolver, GMRESSolver, BICSTABSolver])
+@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverLU, CGSolver, GMRESSolver, BICSTABSolver])
 @pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
 def test_sparse_solver_central_difference(central_difference_basic_setup, linear_solver, preconditioner):
     setup_data = central_difference_basic_setup.copy()
@@ -236,7 +236,7 @@ def test_sparse_solver_central_difference(central_difference_basic_setup, linear
     prec = preconditioner() if preconditioner is not None else None
     run_central_difference_test(setup_data, lumped=False, linear_solver=linear_solver(), preconditioner=prec)
 
-@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverInv, CGSolver, GMRESSolver, BICSTABSolver])
+@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverLU, CGSolver, GMRESSolver, BICSTABSolver])
 @pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
 def test_sparse_solver_central_difference_lumped(central_difference_basic_setup, linear_solver, preconditioner):
     setup_data = central_difference_basic_setup.copy()
@@ -258,7 +258,7 @@ def test_full_solver_central_difference_consistent_lumped(full_matrix_setup, lin
 
 
 
-@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverInv,CGSolver, GMRESSolver, BICSTABSolver])
+@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverLU,CGSolver, GMRESSolver, BICSTABSolver])
 @pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
 def test_sparse_solver_central_difference_consistent_lumped(full_matrix_setup, linear_solver, preconditioner):
     setup_data = full_matrix_setup.copy()
@@ -277,7 +277,7 @@ def test_full_solver_central_difference_full_damp_lumped(full_matrix_damping_set
     run_central_difference_test_damping(setup_data, lumped=True, linear_solver=linear_solver(), preconditioner=None)
 
 
-@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverInv, CGSolver, GMRESSolver, BICSTABSolver])
+@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverLU, CGSolver, GMRESSolver, BICSTABSolver])
 @pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
 def test_sparse_solver_central_difference_consistent_damp_lump(full_matrix_damping_setup, linear_solver, preconditioner):
     setup_data = full_matrix_damping_setup.copy()

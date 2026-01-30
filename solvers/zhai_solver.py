@@ -2,7 +2,7 @@ import numpy as np
 import numpy.typing as npt
 from tqdm import tqdm
 
-from solvers.linear_equations_solvers import LinearSolversABC, SparseDirectSolverInv
+from solvers.linear_equations_solvers import LinearSolversABC, SparseDirectSolverLU
 from solvers.preconditioners import PreconditionerABC
 from solvers.base_solver import BaseSolverABC, Force, State, Matrix, calculate_initial_acceleration, TimeIntegrationType
 
@@ -14,7 +14,7 @@ class ZhaiSolver(BaseSolverABC):
     def __init__(self,
                  force: Force = Force(),
                  state: State = State(),
-                 linear_solver: LinearSolversABC = SparseDirectSolverInv(),
+                 linear_solver: LinearSolversABC = SparseDirectSolverLU(),
                  preconditioner: PreconditionerABC = None,
                 ):
         """

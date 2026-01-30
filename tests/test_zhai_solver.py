@@ -4,7 +4,7 @@ import numpy as np
 from scipy import sparse
 
 from solvers.base_solver import Force, State
-from solvers.linear_equations_solvers import (SparseDirectSolver, SparseDirectSolverInv, DenseDirectSolver,
+from solvers.linear_equations_solvers import (SparseDirectSolver, SparseDirectSolverLU, DenseDirectSolver,
     CGSolver, GMRESSolver, BICSTABSolver)
 from solvers.preconditioners import JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner
 from solvers.newmark_solver import NewmarkExplicit
@@ -37,7 +37,7 @@ def setup_module():
     return M, K, C, F, n_steps, time, number_eq
 
 
-@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverInv, CGSolver, GMRESSolver, BICSTABSolver])
+@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverLU, CGSolver, GMRESSolver, BICSTABSolver])
 @pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
 def test_zhai_sparse(setup_module, linear_solver, preconditioner):
     """
@@ -69,7 +69,7 @@ def test_zhai_sparse(setup_module, linear_solver, preconditioner):
     np.testing.assert_array_almost_equal(np.round(res.u, 2), np.round(res_2.u, 2))
 
 
-@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverInv, CGSolver, GMRESSolver, BICSTABSolver])
+@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverLU, CGSolver, GMRESSolver, BICSTABSolver])
 @pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
 def test_zhai_sparse_output_int(setup_module, linear_solver, preconditioner):
     """
@@ -129,7 +129,7 @@ def test_zhai_dense(setup_module, linear_solver):
     np.testing.assert_array_almost_equal(np.round(res.u, 2), np.round(res_2.u, 2))
 
 
-@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverInv, CGSolver, GMRESSolver, BICSTABSolver])
+@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverLU, CGSolver, GMRESSolver, BICSTABSolver])
 @pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
 def test_zhai_sparse_two_stages(setup_module, linear_solver, preconditioner):
     """

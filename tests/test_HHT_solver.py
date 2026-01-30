@@ -6,7 +6,7 @@ from scipy import sparse
 from solvers.base_solver import Force, State
 from solvers.HHT_solver import HHTExplicit, HHTImplicitForce
 from solvers.base_solver import Force, State
-from solvers.linear_equations_solvers import (SparseDirectSolver, SparseDirectSolverInv, DenseDirectSolver,
+from solvers.linear_equations_solvers import (SparseDirectSolver, SparseDirectSolverLU, DenseDirectSolver,
     CGSolver, GMRESSolver, BICSTABSolver)
 from solvers.preconditioners import JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner
 
@@ -48,7 +48,7 @@ def setup_module():
 
 
 
-@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverInv, CGSolver, GMRESSolver, BICSTABSolver])
+@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverLU, CGSolver, GMRESSolver, BICSTABSolver])
 @pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
 @pytest.mark.parametrize("hht", [HHTExplicit, HHTImplicitForce])
 def test_hht_sparse(setup_module, linear_solver, preconditioner, hht):
@@ -97,7 +97,7 @@ def test_hht_sparse(setup_module, linear_solver, preconditioner, hht):
         ),
     )
 
-@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverInv,CGSolver, GMRESSolver, BICSTABSolver])
+@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverLU,CGSolver, GMRESSolver, BICSTABSolver])
 @pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
 @pytest.mark.parametrize("hht", [HHTExplicit, HHTImplicitForce])
 def test_hht_sparse_output_int(setup_module, linear_solver, preconditioner, hht):
@@ -181,7 +181,7 @@ def test_hht_dense(setup_module, linear_solver, hht):
     )
 
 
-@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverInv, CGSolver, GMRESSolver, BICSTABSolver])
+@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverLU, CGSolver, GMRESSolver, BICSTABSolver])
 @pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
 @pytest.mark.parametrize("hht", [HHTExplicit, HHTImplicitForce])
 def test_hht_two_stages(setup_module, linear_solver, preconditioner, hht):

@@ -2,7 +2,7 @@ from tqdm import tqdm
 import numpy as np
 import numpy.typing as npt
 
-from solvers.linear_equations_solvers import LinearSolversABC, SparseDirectSolverInv
+from solvers.linear_equations_solvers import LinearSolversABC, SparseDirectSolverLU
 from solvers.preconditioners import PreconditionerABC
 from solvers.base_solver import BaseSolverABC, Force, State, Matrix, calculate_initial_acceleration, TimeIntegrationType
 
@@ -14,7 +14,7 @@ class HHTImplicitForce(BaseSolverABC):
     def __init__(self,
                  force: Force = Force(),
                  state: State = State(),
-                 linear_solver: LinearSolversABC = SparseDirectSolverInv(),
+                 linear_solver: LinearSolversABC = SparseDirectSolverLU(),
                  preconditioner: PreconditionerABC = None,
                  alpha: float = 1/6,
                  max_iter: int =15,
@@ -211,7 +211,7 @@ class HHTExplicit(BaseSolverABC):
     def __init__(self,
                  force: Force = Force(),
                  state: State = State(),
-                 linear_solver: LinearSolversABC = SparseDirectSolverInv(),
+                 linear_solver: LinearSolversABC = SparseDirectSolverLU(),
                  preconditioner: PreconditionerABC = None,
                  alpha: float = 1/6,
                  ):
