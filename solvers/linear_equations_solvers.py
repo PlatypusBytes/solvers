@@ -88,32 +88,6 @@ class DenseDirectSolver(LinearSolversABC):
         x = lu_solve((self._lu, self._piv), b)
         return x
 
-    def __getstate__(self) -> dict:
-        """
-        Prepare the state for pickling.
-        This is needed for when doing deepcopy or pickling the solver.
-
-        Returns:
-            dict: The state dictionary without unpicklable entries.
-        """
-        state = self.__dict__.copy()
-        state["_A_id"] = None
-        state["_lu"] = None
-        state["_piv"] = None
-        return state
-
-    def __setstate__(self, state: dict):
-        """
-        Restore the state from pickling.
-        This is needed for when doing deepcopy or unpickling the solver.
-
-        Args:
-            state (dict): The state dictionary.
-        """
-        self.__dict__.update(state)
-        self._A_id = None
-        self._lu = None
-        self._piv = None
 
 class SparseDirectSolverLU(LinearSolversABC):
     """
@@ -158,33 +132,6 @@ class SparseDirectSolverLU(LinearSolversABC):
 
         x = self._inverse_A.solve(b)
         return x
-
-    def __getstate__(self) -> dict:
-        """
-        Prepare the state for pickling.
-        This is needed for when doing deepcopy or pickling the solver.
-
-        Returns:
-            dict: The state dictionary without unpicklable entries.
-        """
-        state = self.__dict__.copy()
-        state["_inverse_A"] = None
-        state["_A_id"] = None
-        return state
-
-    def __setstate__(self, state: dict):
-        """
-        Restore the state from pickling.
-        This is needed for when doing deepcopy or unpickling the solver.
-
-        Args:
-            state (dict): The state dictionary.
-        """
-        self.__dict__.update(state)
-        self._inverse_A = None
-        self._A_id = None
-
-
 
 
 class SparseDirectSolver(LinearSolversABC):
