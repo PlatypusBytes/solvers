@@ -1,6 +1,7 @@
 from tqdm import tqdm
 import numpy as np
 import numpy.typing as npt
+from typing import Optional
 
 from solvers.linear_equations_solvers import LinearSolversABC, SparseDirectSolverLU
 from solvers.preconditioners import PreconditionerABC
@@ -12,10 +13,10 @@ class HHTImplicitForce(BaseSolverABC):
     Hilber-Hughes-Taylor implicit integration scheme with Newton Raphson strategy for non-linear force.
     """
     def __init__(self,
-                 force: Force = Force(),
-                 state: State = State(),
-                 linear_solver: LinearSolversABC = SparseDirectSolverLU(),
-                 preconditioner: PreconditionerABC = None,
+                 force: Optional[Force] = None,
+                 state: Optional[State] = None,
+                 linear_solver: Optional[LinearSolversABC] = None,
+                 preconditioner: Optional[PreconditionerABC] = None,
                  alpha: float = 1/6,
                  max_iter: int =15,
                  tolerance: float = 1e-5):
@@ -23,17 +24,17 @@ class HHTImplicitForce(BaseSolverABC):
         Initializes the HHT implicit solver with given parameters.
 
         Args:
-            force (Force): Force instance (default: Force())
-            state (State): State instance (default: State())
-            linear_solver (LinearSolversABC): Linear solver instance (default: SparseDirectSolver())
-            preconditioner (PreconditionerABC): Preconditioner instance (default: None)
+            force (Force | None): Force definitions (default: creates new Force())
+            state (State | None): Solver state (default: creates new State())
+            linear_solver (LinearSolversABC | None): Linear solver instance (default: SparseDirectSolverLU())
+            preconditioner (PreconditionerABC | None): Preconditioner instance (default: None)
             alpha (float): HHT alpha parameter for numerical dissipation.
             max_iter (int): Maximum number of iterations for the Newton-Raphson method.
             tolerance (float): Convergence tolerance for the Newton-Raphson method.
         """
-        self.force = force
-        self.state = state
-        self.linear_solver = linear_solver
+        self.force = force if force is not None else Force()
+        self.state = state if state is not None else State()
+        self.linear_solver = linear_solver if linear_solver is not None else SparseDirectSolverLU()
         self.preconditioner = preconditioner
         self.alpha = alpha
         self.type = TimeIntegrationType.DYNAMIC
@@ -209,25 +210,25 @@ class HHTExplicit(BaseSolverABC):
     Hilber-Hughes-Taylor explicit integration scheme.
     """
     def __init__(self,
-                 force: Force = Force(),
-                 state: State = State(),
-                 linear_solver: LinearSolversABC = SparseDirectSolverLU(),
-                 preconditioner: PreconditionerABC = None,
+                 force: Optional[Force] = None,
+                 state: Optional[State] = None,
+                 linear_solver: Optional[LinearSolversABC] = None,
+                 preconditioner: Optional[PreconditionerABC] = None,
                  alpha: float = 1/6,
                  ):
         """
         Initializes the HHT explicit solver with given parameters.
 
         Args:
-            force (Force): Force instance (default: Force())
-            state (State): State instance (default: State())
-            linear_solver (LinearSolversABC): Linear solver instance (default: SparseDirectSolver())
-            preconditioner (PreconditionerABC): Preconditioner instance (default: None)
+            force (Force | None): Force definitions (default: creates new Force())
+            state (State | None): Solver state (default: creates new State())
+            linear_solver (LinearSolversABC | None): Linear solver instance (default: SparseDirectSolverLU())
+            preconditioner (PreconditionerABC | None): Preconditioner instance (default: None)
             alpha (float): HHT alpha parameter for numerical dissipation.
         """
-        self.force = force
-        self.state = state
-        self.linear_solver = linear_solver
+        self.force = force if force is not None else Force()
+        self.state = state if state is not None else State()
+        self.linear_solver = linear_solver if linear_solver is not None else SparseDirectSolverLU()
         self.preconditioner = preconditioner
         self.alpha = alpha
         self.type = TimeIntegrationType.DYNAMIC

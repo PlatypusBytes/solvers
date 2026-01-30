@@ -1,6 +1,7 @@
 import numpy as np
 import numpy.typing as npt
 from tqdm import tqdm
+from typing import Optional
 
 from solvers.linear_equations_solvers import LinearSolversABC, SparseDirectSolverLU
 from solvers.preconditioners import PreconditionerABC
@@ -12,12 +13,12 @@ class NewmarkImplicitForce(BaseSolverABC):
     Implicit Newmark Solver class.
     """
     def __init__(self,
-                 force: Force = Force(),
-                 state: State = State(),
+                 force: Optional[Force] = None,
+                 state: Optional[State] = None,
                  beta: float = 0.25,
                  gamma: float = 0.5,
-                 linear_solver: LinearSolversABC = SparseDirectSolverLU(),
-                 preconditioner: PreconditionerABC = None,
+                 linear_solver: Optional[LinearSolversABC] = None,
+                 preconditioner: Optional[PreconditionerABC] = None,
                  max_iter: int = 15,
                  tolerance: float = 1e-5
                  ):
@@ -25,21 +26,21 @@ class NewmarkImplicitForce(BaseSolverABC):
         Constructor of the Implicit Newmark Solver.
 
         Args:
-            force (Force): Force class containing the force definitions (default: Force())
-            state (State): State class containing the state (default: State())
+            force (Optional[Force]): Force definitions (default: creates new Force())
+            state (Optional[State]): Solver state (default: creates new State())
             beta (float): Newmark numerical stability parameter (default: 0.25)
             gamma (float): Newmark numerical stability parameter (default: 0.5)
-            linear_solver (LinearSolversABC): Linear solver to be used (default: SparseDirectSolver())
-            preconditioner (PreconditionerABC): Preconditioner to be used (default: None)
+            linear_solver (Optional[LinearSolversABC]): Linear solver to be used (default: SparseDirectSolverLU())
+            preconditioner (Optional[PreconditionerABC]): Preconditioner to be used (default: None)
             max_iter (int): Maximum number of iterations for the Newton-Raphson scheme (default: 15)
             tolerance (float): Tolerance for convergence in the Newton-Raphson scheme (default: 1e-5)
         """
         self.beta = beta
         self.gamma = gamma
-        self.linear_solver = linear_solver
+        self.linear_solver = linear_solver if linear_solver is not None else SparseDirectSolverLU()
         self.preconditioner = preconditioner
-        self.force = force
-        self.state = state
+        self.force = force if force is not None else Force()
+        self.state = state if state is not None else State()
         self.max_iter = max_iter
         self.tolerance = tolerance
         self.type = TimeIntegrationType.DYNAMIC
@@ -213,29 +214,29 @@ class NewmarkExplicit(BaseSolverABC):
     Explicit Newmark Solver class.
     """
     def __init__(self,
-                 force: Force = Force(),
-                 state: State = State(),
+                 force: Optional[Force] = None,
+                 state: Optional[State] = None,
                  beta: float = 0.25,
                  gamma: float = 0.5,
-                 linear_solver: LinearSolversABC = SparseDirectSolverLU(),
-                 preconditioner: PreconditionerABC = None):
+                 linear_solver: Optional[LinearSolversABC] = None,
+                 preconditioner: Optional[PreconditionerABC] = None):
         """
         Constructor of the Explicit Newmark Solver.
 
         Args:
-            force (Force): Force class containing the force definitions (default: Force())
-            state (State): State class containing the state (default: State())
+            force (Optional[Force]): Force definitions (default: creates new Force())
+            state (Optional[State]): Solver state (default: creates new State())
             beta (float): Newmark numerical stability parameter (default: 0.25)
             gamma (float): Newmark numerical stability parameter (default: 0.5)
-            linear_solver (LinearSolversABC): Linear solver to be used (default: SparseDirectSolver())
-            preconditioner (PreconditionerABC): Preconditioner to be used (default: None)
+            linear_solver (Optional[LinearSolversABC]): Linear solver to be used (default: SparseDirectSolverLU())
+            preconditioner (Optional[PreconditionerABC]): Preconditioner to be used (default: None)
         """
         self.beta = beta
         self.gamma = gamma
-        self.linear_solver = linear_solver
+        self.linear_solver = linear_solver if linear_solver is not None else SparseDirectSolverLU()
         self.preconditioner = preconditioner
-        self.force = force
-        self.state = state
+        self.force = force if force is not None else Force()
+        self.state = state if state is not None else State()
         self.type = TimeIntegrationType.DYNAMIC
 
     def initialise(self, number_eq: int, time: npt.NDArray[np.float64]):

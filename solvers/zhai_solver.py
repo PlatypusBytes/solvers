@@ -1,6 +1,7 @@
 import numpy as np
 import numpy.typing as npt
 from tqdm import tqdm
+from typing import Optional
 
 from solvers.linear_equations_solvers import LinearSolversABC, SparseDirectSolverLU
 from solvers.preconditioners import PreconditionerABC
@@ -12,24 +13,24 @@ class ZhaiSolver(BaseSolverABC):
     Zhai Solver class. This class contains the explicit solver according to :cite:p: `Zhai_1996`.
     """
     def __init__(self,
-                 force: Force = Force(),
-                 state: State = State(),
-                 linear_solver: LinearSolversABC = SparseDirectSolverLU(),
-                 preconditioner: PreconditionerABC = None,
+                 force: Optional[Force] = None,
+                 state: Optional[State] = None,
+                 linear_solver: Optional[LinearSolversABC] = None,
+                 preconditioner: Optional[PreconditionerABC] = None,
                 ):
         """
         Initialisation of the Zhai Solver class.
 
         Args:
-            force (Force): Force class containing the force definitions (default: Force())
-            state (State): State class containing the state (default: State())
-            linear_solver (LinearSolversABC): Linear solver to be used (default: SparseDirectSolver())
-            preconditioner (PreconditionerABC): Preconditioner to be used (default: None)
+            force (Optional[Force]): Force definitions (default: creates new Force())
+            state (Optional[State]): Solver state (default: creates new State())
+            linear_solver (Optional[LinearSolversABC]): Linear solver to be used (default: SparseDirectSolverLU())
+            preconditioner (Optional[PreconditionerABC]): Preconditioner to be used (default: None)
         """
-        self.linear_solver = linear_solver
+        self.linear_solver = linear_solver if linear_solver is not None else SparseDirectSolverLU()
         self.preconditioner = preconditioner
-        self.force = force
-        self.state = state
+        self.force = force if force is not None else Force()
+        self.state = state if state is not None else State()
         self.psi = 0.5
         self.phi = 0.5
         self.beta = 1/4

@@ -14,23 +14,23 @@ class StaticSolver(BaseSolverABC):
     Static Solver class.
     """
     def __init__(self,
-                 force: Force = Force(),
-                 state: State = State(),
-                 linear_solver: LinearSolversABC = SparseDirectSolverLU(),
-                 preconditioner: PreconditionerABC = None):
+                 force: Optional[Force] = None,
+                 state: Optional[State] = None,
+                 linear_solver: Optional[LinearSolversABC] = None,
+                 preconditioner: Optional[PreconditionerABC] = None):
         """
         Constructor of the Static Solver class.
 
         Args:
-            force (Force): Force class containing the force definitions (default: Force())
-            state (State): State class containing the state (default: State())
-            linear_solver (LinearSolversABC): Linear solver to be used (default: SparseDirectSolver())
-            preconditioner (PreconditionerABC): Preconditioner to be used (default: None)
+            force (Optional[Force]): Force definitions (default: creates new Force())
+            state (Optional[State]): Solver state (default: creates new State())
+            linear_solver (Optional[LinearSolversABC]): Linear solver to be used (default: SparseDirectSolverLU())
+            preconditioner (Optional[PreconditionerABC]): Preconditioner to be used (default: None)
         """
-        self.linear_solver = linear_solver
+        self.linear_solver = linear_solver if linear_solver is not None else SparseDirectSolverLU()
         self.preconditioner = preconditioner
-        self.force = force
-        self.state = state
+        self.force = force if force is not None else Force()
+        self.state = state if state is not None else State()
         self.type = TimeIntegrationType.STATIC
 
     def initialise(self, number_eq: int, time: npt.NDArray[np.float64]):

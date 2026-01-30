@@ -2,6 +2,7 @@ import numpy as np
 import numpy.typing as npt
 from scipy.sparse import diags, issparse
 from tqdm import tqdm
+from typing import Optional
 
 from solvers.utils import LumpingMethod
 from solvers.base_solver import BaseSolverABC, Force, State, Matrix, TimeIntegrationType
@@ -14,29 +15,29 @@ class CentralDifferenceSolver(BaseSolverABC):
     Explicit central difference solver following the :cite:p:`Bathe_1996` formulation.
     """
     def __init__(self,
-                 force: Force = Force(),
-                 state: State = State(),
-                 linear_solver: LinearSolversABC = SparseDirectSolverLU(),
-                 preconditioner: PreconditionerABC = None,
+                 force: Optional[Force] = None,
+                 state: Optional[State] = None,
+                 linear_solver: Optional[LinearSolversABC] = None,
+                 preconditioner: Optional[PreconditionerABC] = None,
                  lumping_method: LumpingMethod = LumpingMethod.RowSum):
         """
         Constructor of the Central Difference Solver.
 
         Args:
-            force (Force): Force class containing the force definitions (default: Force())
-            state (State): State class containing the state (default: State())
-            linear_solver (LinearSolversABC): Linear solver to be used (default: SparseDirectSolver())
-            preconditioner (PreconditionerABC): Preconditioner to be used (default: None)
+            force (Optional[Force]): Force definitions (default: creates new Force())
+            state (Optional[State]): Solver state (default: creates new State())
+            linear_solver (Optional[LinearSolversABC]): Linear solver to be used (default: SparseDirectSolverLU())
+            preconditioner (Optional[PreconditionerABC]): Preconditioner to be used (default: None)
             lumping_method (LumpingMethod): Lumping method to be used (default: RowSum)
         """
 
         if not isinstance(lumping_method, LumpingMethod):
             raise ValueError("Lumping method must be of type LumpingMethod")
 
-        self.linear_solver = linear_solver
+        self.linear_solver = linear_solver if linear_solver is not None else SparseDirectSolverLU()
         self.preconditioner = preconditioner
-        self.force = force
-        self.state = state
+        self.force = force if force is not None else Force()
+        self.state = state if state is not None else State()
         self.lump_method = lumping_method
         self.is_lumped = lumping_method != LumpingMethod.NONE
         self._is_sparse_calculation = False
