@@ -1,8 +1,6 @@
 from enum import Enum
 import numpy as np
 from scipy.sparse import isspmatrix
-from scipy.linalg import eigh
-from scipy.sparse.linalg import eigsh
 
 
 class LumpingMethod(Enum):

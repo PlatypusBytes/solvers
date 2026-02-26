@@ -42,7 +42,13 @@ class BatheSolver(BaseSolverABC):
         self.lump_method = lumping_method
         self.is_lumped = lumping_method != LumpingMethod.NONE
         self._p = 0.54  # Bathe parameter
-        self.type = TimeIntegrationType.DYNAMIC
+
+    @property
+    def type(self) -> TimeIntegrationType:
+        """
+        Time integration type of the solver.
+        """
+        return TimeIntegrationType.DYNAMIC
 
     def initialise(self, number_eq: int, time: npt.NDArray[np.float64]):
         """

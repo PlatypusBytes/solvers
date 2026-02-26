@@ -37,12 +37,18 @@ class HHTImplicitForce(BaseSolverABC):
         self.linear_solver = linear_solver if linear_solver is not None else SparseDirectSolverLU()
         self.preconditioner = preconditioner
         self.alpha = alpha
-        self.type = TimeIntegrationType.DYNAMIC
 
         self.beta = (1 + self.alpha)**2/4
         self.gamma = (1 + 2 * self.alpha)/2
         self.max_iter = max_iter
         self.tolerance = tolerance
+
+    @property
+    def type(self) -> TimeIntegrationType:
+        """
+        Time integration type of the solver.
+        """
+        return TimeIntegrationType.DYNAMIC
 
     def initialise(self, number_eq: int, time: np.ndarray):
         """
@@ -231,10 +237,16 @@ class HHTExplicit(BaseSolverABC):
         self.linear_solver = linear_solver if linear_solver is not None else SparseDirectSolverLU()
         self.preconditioner = preconditioner
         self.alpha = alpha
-        self.type = TimeIntegrationType.DYNAMIC
 
         self.beta = (1 + self.alpha)**2/4
         self.gamma = (1 + 2 * self.alpha)/2
+
+    @property
+    def type(self) -> TimeIntegrationType:
+        """
+        Time integration type of the solver.
+        """
+        return TimeIntegrationType.DYNAMIC
 
     def initialise(self, number_eq: int, time: npt.NDArray[np.float64]):
         """

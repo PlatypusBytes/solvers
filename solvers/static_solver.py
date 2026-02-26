@@ -31,7 +31,13 @@ class StaticSolver(BaseSolverABC):
         self.preconditioner = preconditioner
         self.force = force if force is not None else Force()
         self.state = state if state is not None else State()
-        self.type = TimeIntegrationType.STATIC
+
+    @property
+    def type(self) -> TimeIntegrationType:
+        """
+        Time integration type of the solver.
+        """
+        return TimeIntegrationType.STATIC
 
     def initialise(self, number_eq: int, time: npt.NDArray[np.float64]):
         """

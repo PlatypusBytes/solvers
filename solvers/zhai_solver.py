@@ -35,7 +35,13 @@ class ZhaiSolver(BaseSolverABC):
         self.phi = 0.5
         self.beta = 1/4
         self.gamma = 1/2
-        self.type = TimeIntegrationType.DYNAMIC
+
+    @property
+    def type(self) -> TimeIntegrationType:
+        """
+        Time integration type of the solver.
+        """
+        return TimeIntegrationType.DYNAMIC
 
     def initialise(self, number_eq: int, time: npt.NDArray[np.float64]):
         """

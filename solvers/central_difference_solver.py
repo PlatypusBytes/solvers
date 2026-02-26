@@ -41,7 +41,13 @@ class CentralDifferenceSolver(BaseSolverABC):
         self.lump_method = lumping_method
         self.is_lumped = lumping_method != LumpingMethod.NONE
         self._is_sparse_calculation = False
-        self.type = TimeIntegrationType.DYNAMIC
+
+    @property
+    def type(self) -> TimeIntegrationType:
+        """
+        Time integration type of the solver.
+        """
+        return TimeIntegrationType.DYNAMIC
 
     def initialise(self, number_eq: int, time: npt.NDArray[np.float64]):
         """

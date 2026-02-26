@@ -43,7 +43,13 @@ class NewmarkImplicitForce(BaseSolverABC):
         self.state = state if state is not None else State()
         self.max_iter = max_iter
         self.tolerance = tolerance
-        self.type = TimeIntegrationType.DYNAMIC
+
+    @property
+    def type(self) -> TimeIntegrationType:
+        """
+        Time integration type of the solver.
+        """
+        return TimeIntegrationType.DYNAMIC
 
     def initialise(self, number_eq: int, time: npt.NDArray[np.float64]):
         """
@@ -237,7 +243,13 @@ class NewmarkExplicit(BaseSolverABC):
         self.preconditioner = preconditioner
         self.force = force if force is not None else Force()
         self.state = state if state is not None else State()
-        self.type = TimeIntegrationType.DYNAMIC
+
+    @property
+    def type(self) -> TimeIntegrationType:
+        """
+        Time integration type of the solver.
+        """
+        return TimeIntegrationType.DYNAMIC
 
     def initialise(self, number_eq: int, time: npt.NDArray[np.float64]):
         """
