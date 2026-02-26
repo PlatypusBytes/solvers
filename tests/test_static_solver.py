@@ -5,11 +5,7 @@ from scipy import sparse
 
 from solvers.static_solver import StaticSolver
 from solvers.base_solver import Force, State
-from solvers.linear_equations_solvers import (SparseDirectSolver, SparseDirectSolverLU, DenseDirectSolver,
-    CGSolver, GMRESSolver, BICSTABSolver)
-from solvers.preconditioners import JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner
-
-from tests.utils import *
+from tests.utils import ALL_LINEAR_SOLVERS, ALL_PRECONDITIONERS, ALL_SPARSE_LINEAR_SOLVERS
 
 
 @pytest.fixture
@@ -47,8 +43,8 @@ def setup_module():
 
 
 
-@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverLU,CGSolver, GMRESSolver, BICSTABSolver])
-@pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
+@pytest.mark.parametrize("linear_solver", ALL_LINEAR_SOLVERS)
+@pytest.mark.parametrize("preconditioner", ALL_PRECONDITIONERS)
 def test_solver_static_sparse(setup_module, linear_solver, preconditioner):
     """
     Static solver test with sparse matrices
@@ -94,8 +90,8 @@ def test_solver_static_sparse(setup_module, linear_solver, preconditioner):
     )
 
 
-@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverLU, CGSolver, GMRESSolver, BICSTABSolver])
-@pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
+@pytest.mark.parametrize("linear_solver", ALL_LINEAR_SOLVERS)
+@pytest.mark.parametrize("preconditioner", ALL_PRECONDITIONERS)
 def test_solver_static_sparse_output_int(setup_module, linear_solver, preconditioner):
     """
     Static solver test with sparse matrices
@@ -131,8 +127,8 @@ def test_solver_static_sparse_output_int(setup_module, linear_solver, preconditi
     )
 
 
-@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverLU, CGSolver, GMRESSolver, BICSTABSolver])
-@pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
+@pytest.mark.parametrize("linear_solver", ALL_LINEAR_SOLVERS)
+@pytest.mark.parametrize("preconditioner", ALL_PRECONDITIONERS)
 def test_solver_static_sparse_output_int_staged(setup_module, linear_solver, preconditioner):
     """
     Static solver test with sparse matrices
@@ -180,7 +176,7 @@ def test_solver_static_sparse_output_int_staged(setup_module, linear_solver, pre
     )
 
 
-@pytest.mark.parametrize("linear_solver", [DenseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver])
+@pytest.mark.parametrize("linear_solver", ALL_SPARSE_LINEAR_SOLVERS)
 def test_solver_static_np_array(setup_module, linear_solver):
     """
     Static solver test with numpy array matrices

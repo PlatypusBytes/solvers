@@ -53,8 +53,8 @@ class ZhaiSolver(BaseSolverABC):
         """
         self.state.initialise(number_eq, time)
 
-    def prediction(self, u: npt.NDArray[np.float64], v: npt.NDArray[np.float64], a: npt.NDArray[np.float64],
-                   a_old: npt.NDArray[np.float64], dt: float, is_initial: bool) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+    def __prediction(self, u: npt.NDArray[np.float64], v: npt.NDArray[np.float64], a: npt.NDArray[np.float64],
+                     a_old: npt.NDArray[np.float64], dt: float, is_initial: bool) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         """
         Perform prediction for displacement and acceleration
 
@@ -82,10 +82,10 @@ class ZhaiSolver(BaseSolverABC):
         v_new = v + (1 + phi) * a * dt - phi * a_old * dt
         return u_new, v_new
 
-    def newmark_iteration(self, u: npt.NDArray[np.float64],
-                          v: npt.NDArray[np.float64],
-                          a: npt.NDArray[np.float64],
-                          a_new: npt.NDArray[np.float64], dt: float) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+    def __newmark_iteration(self, u: npt.NDArray[np.float64],
+                            v: npt.NDArray[np.float64],
+                            a: npt.NDArray[np.float64],
+                            a_new: npt.NDArray[np.float64], dt: float) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         """
         Perform Newmark iteration as corrector for displacement and velocity
 
@@ -166,7 +166,7 @@ class ZhaiSolver(BaseSolverABC):
                 is_initial = False
 
             # Predict displacement and velocity
-            u_new, v_new = self.prediction(u, v, a, a_old, t_step, is_initial)
+            u_new, v_new = self.__prediction(u, v, a, a_old, t_step, is_initial)
 
             # Calculate predicted external force vector
             self.force.update_rhs_at_non_linear_iteration(t, u=u_new)
@@ -174,7 +174,7 @@ class ZhaiSolver(BaseSolverABC):
             # Calculate predicted acceleration
             a_new = self.linear_solver.solve(M, self.force.F - K.dot(u_new) - C.dot(v_new))
             # Correct displacement and velocity
-            u_new, v_new = self.newmark_iteration(u, v, a, a_new, t_step)
+            u_new, v_new = self.__newmark_iteration(u, v, a, a_new, t_step)
 
             # Calculate corrected force vector
             self.force.update_rhs_at_non_linear_iteration(t, u=u_new)

@@ -5,11 +5,15 @@ from scipy import sparse
 
 from solvers.bathe_solver import BatheSolver
 from solvers.utils import LumpingMethod
-from tests.utils import set_matrices_as_sparse, set_matrices_as_np_array
 from solvers.base_solver import Force, State
-from solvers.linear_equations_solvers import (SparseDirectSolver, SparseDirectSolverLU, DenseDirectSolver,
-    CGSolver, GMRESSolver, BICSTABSolver)
-from solvers.preconditioners import JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner
+from tests.utils import (
+    set_matrices_as_sparse,
+    set_matrices_as_np_array,
+    ALL_LINEAR_SOLVERS,
+    ALL_PRECONDITIONERS,
+    ALL_LUMPING_METHODS,
+    ALL_SPARSE_LINEAR_SOLVERS,
+)
 
 
 @pytest.fixture
@@ -90,9 +94,9 @@ def full_matrix_damping_setup():
     return M_mat, K_mat, C_mat, F_mat, n_steps, time, number_eq
 
 
-@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverLU, CGSolver, GMRESSolver, BICSTABSolver])
-@pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
-@pytest.mark.parametrize("lumping_method", [LumpingMethod.NONE, LumpingMethod.RowSum])
+@pytest.mark.parametrize("linear_solver", ALL_LINEAR_SOLVERS)
+@pytest.mark.parametrize("preconditioner", ALL_PRECONDITIONERS)
+@pytest.mark.parametrize("lumping_method", ALL_LUMPING_METHODS)
 def test_bathe_sparse(bathe_basic_setup, linear_solver, preconditioner, lumping_method):
     """
     Test Bathe solver with different linear solvers and preconditioners using sparse matrices and damping.
@@ -136,8 +140,8 @@ def test_bathe_sparse(bathe_basic_setup, linear_solver, preconditioner, lumping_
     )
 
 
-@pytest.mark.parametrize("linear_solver", [DenseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver])
-@pytest.mark.parametrize("lumping_method", [LumpingMethod.NONE, LumpingMethod.RowSum])
+@pytest.mark.parametrize("linear_solver", ALL_SPARSE_LINEAR_SOLVERS)
+@pytest.mark.parametrize("lumping_method", ALL_LUMPING_METHODS)
 def test_bathe_dense(bathe_basic_setup, linear_solver, lumping_method):
     """
     Test Bathe solver with different linear solvers using dense matrices or sparse matrices.
@@ -179,8 +183,8 @@ def test_bathe_dense(bathe_basic_setup, linear_solver, lumping_method):
     )
 
 
-@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverLU, CGSolver, GMRESSolver, BICSTABSolver])
-@pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
+@pytest.mark.parametrize("linear_solver", ALL_LINEAR_SOLVERS)
+@pytest.mark.parametrize("preconditioner", ALL_PRECONDITIONERS)
 def test_bathe_sparse_full(full_matrix_setup, linear_solver, preconditioner):
     """
     Test Bathe solver with different linear solvers and preconditioners using sparse full matrices.
@@ -189,7 +193,6 @@ def test_bathe_sparse_full(full_matrix_setup, linear_solver, preconditioner):
         full_matrix_setup: Fixture setting up matrices
         linear_solver: Linear solver class
         preconditioner: Preconditioner class
-        lumping_method: Lumping method
     """
     M, K, C, F, n_steps, time, number_eq = full_matrix_setup
     M, K, C, F = set_matrices_as_sparse(M, K, C, F)
@@ -224,8 +227,8 @@ def test_bathe_sparse_full(full_matrix_setup, linear_solver, preconditioner):
     )
 
 
-@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverLU, CGSolver, GMRESSolver, BICSTABSolver])
-@pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
+@pytest.mark.parametrize("linear_solver", ALL_LINEAR_SOLVERS)
+@pytest.mark.parametrize("preconditioner", ALL_PRECONDITIONERS)
 def test_bathe_damping(full_matrix_damping_setup, linear_solver, preconditioner):
     """
     Test Bathe solver with different linear solvers and preconditioners using sparse full matrices and damping.

@@ -4,8 +4,7 @@ import numpy as np
 from scipy import sparse
 
 from solvers.base_solver import Force, State, calculate_initial_acceleration, TimeIntegrationType
-from solvers.linear_equations_solvers import SparseDirectSolver, DenseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver
-from solvers.preconditioners import JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner
+from solvers.linear_equations_solvers import SparseDirectSolver
 from solvers.newmark_solver import NewmarkExplicit, NewmarkImplicitForce
 from solvers.central_difference_solver import CentralDifferenceSolver
 from solvers.bathe_solver import BatheSolver
@@ -13,7 +12,7 @@ from solvers.HHT_solver import HHTImplicitForce, HHTExplicit
 from solvers.zhai_solver import ZhaiSolver
 from solvers.static_solver import StaticSolver
 
-from tests.utils import *
+from tests.utils import set_matrices_as_sparse, ALL_DYNAMIC_SOLVERS, ALL_SPARSE_LINEAR_SOLVERS, ALL_PRECONDITIONERS
 
 
 @pytest.fixture
@@ -74,7 +73,7 @@ def test_force_time_exception(setup_module):
     assert "Solver time is not equal to force vector time" in str(exception.value)
 
 
-@pytest.mark.parametrize("solver", [NewmarkExplicit, NewmarkImplicitForce, CentralDifferenceSolver, BatheSolver, HHTImplicitForce, HHTExplicit, ZhaiSolver])
+@pytest.mark.parametrize("solver", ALL_DYNAMIC_SOLVERS)
 def test_load_function(setup_module, solver):
     """
     Test if Newmark solver returns equal results while using a load function and an initial force matrix. The load
@@ -114,8 +113,8 @@ def test_load_function(setup_module, solver):
     np.testing.assert_array_almost_equal(res_func.u, res_manual.u)
 
 
-@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver])
-@pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
+@pytest.mark.parametrize("linear_solver", ALL_SPARSE_LINEAR_SOLVERS)
+@pytest.mark.parametrize("preconditioner", ALL_PRECONDITIONERS)
 def test_initial_acceleration(setup_module, linear_solver, preconditioner):
 
     M, K, C, F, _, _, number_eq = setup_module

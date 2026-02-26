@@ -3,13 +3,9 @@ import numpy as np
 from scipy import sparse
 
 from solvers.base_solver import Force, State
-from solvers.linear_equations_solvers import (SparseDirectSolver, DenseDirectSolver, SparseDirectSolverLU,
-    CGSolver, GMRESSolver, BICSTABSolver)
-from solvers.preconditioners import JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner
 from solvers.central_difference_solver import CentralDifferenceSolver
 from solvers.utils import LumpingMethod
-
-from tests.utils import *
+from tests.utils import set_matrices_as_sparse, set_matrices_as_np_array, ALL_LINEAR_SOLVERS, ALL_PRECONDITIONERS
 
 
 @pytest.fixture
@@ -46,8 +42,8 @@ def setup_module():
     return M, K, C, F, n_steps, time, number_eq
 
 
-@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverLU, CGSolver, GMRESSolver, BICSTABSolver])
-@pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
+@pytest.mark.parametrize("linear_solver", ALL_LINEAR_SOLVERS)
+@pytest.mark.parametrize("preconditioner", ALL_PRECONDITIONERS)
 def test_central_difference_sparse(setup_module, linear_solver, preconditioner):
     """
     Test Central Difference solver with different linear solvers and preconditioners using sparse matrices.
@@ -92,8 +88,8 @@ def test_central_difference_sparse(setup_module, linear_solver, preconditioner):
     )
 
 
-@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverLU, CGSolver, GMRESSolver, BICSTABSolver])
-@pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
+@pytest.mark.parametrize("linear_solver", ALL_LINEAR_SOLVERS)
+@pytest.mark.parametrize("preconditioner", ALL_PRECONDITIONERS)
 def test_central_difference_sparse_output_int(setup_module, linear_solver, preconditioner):
     """
     Test Central Difference solver with different linear solvers and preconditioners using sparse matrices.
@@ -128,7 +124,7 @@ def test_central_difference_sparse_output_int(setup_module, linear_solver, preco
     )
 
 
-@pytest.mark.parametrize("linear_solver", [DenseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver])
+@pytest.mark.parametrize("linear_solver", ALL_LINEAR_SOLVERS)
 def test_central_difference_dense(setup_module, linear_solver):
     """
     Test Central Difference solver with different linear solvers using dense matrices.
@@ -170,8 +166,8 @@ def test_central_difference_dense(setup_module, linear_solver):
     )
 
 
-@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverLU, CGSolver, GMRESSolver, BICSTABSolver])
-@pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
+@pytest.mark.parametrize("linear_solver", ALL_LINEAR_SOLVERS)
+@pytest.mark.parametrize("preconditioner", ALL_PRECONDITIONERS)
 def test_central_difference_static(setup_module, linear_solver, preconditioner):
     """
     Test Central Difference solver with a lot of damping to see if solution converges to static solution
