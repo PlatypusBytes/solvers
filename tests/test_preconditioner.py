@@ -82,6 +82,6 @@ def test_ilu(test_matrix):
     A = test_matrix
 
     M =  ILUPreconditioner(drop_tol=0.0, fill_factor=10).build(A)
-    I_approx = np.column_stack([M @ np.eye(3)[:, i] for i in range(3)])
+    A_inv_approx = np.column_stack([M @ np.eye(3)[:, i] for i in range(3)])
     A_inv = np.linalg.inv(A.toarray())
-    np.testing.assert_allclose(I_approx, A_inv, atol=1e-6)
+    np.testing.assert_allclose(A_inv_approx, A_inv, atol=1e-6)

@@ -67,10 +67,8 @@ def test_force_time_exception(setup_module):
     res.initialise(number_eq, time)
 
     # check if ValueError is raised for time mismatch
-    with pytest.raises(ValueError) as exception:
+    with pytest.raises(ValueError, match="Solver time is not equal to force vector time"):
         res.calculate(K, F, 0, n_steps - 1)
-
-    assert "Solver time is not equal to force vector time" in str(exception.value)
 
 
 @pytest.mark.parametrize("solver", ALL_DYNAMIC_SOLVERS)
