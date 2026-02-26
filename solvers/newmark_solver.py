@@ -26,11 +26,11 @@ class NewmarkImplicitForce(BaseSolverABC):
         Constructor of the Implicit Newmark Solver.
 
         Args:
-            force (Optional[Force]): Force definitions (default: creates new Force())
-            state (Optional[State]): Solver state (default: creates new State())
+            force (Optional[Force]): Force definitions (default: None)
+            state (Optional[State]): Solver state (default: None)
             beta (float): Newmark numerical stability parameter (default: 0.25)
             gamma (float): Newmark numerical stability parameter (default: 0.5)
-            linear_solver (Optional[LinearSolversABC]): Linear solver to be used (default: SparseDirectSolverLU())
+            linear_solver (Optional[LinearSolversABC]): Linear solver to be used (default: None)
             preconditioner (Optional[PreconditionerABC]): Preconditioner to be used (default: None)
             max_iter (int): Maximum number of iterations for the Newton-Raphson scheme (default: 15)
             tolerance (float): Tolerance for convergence in the Newton-Raphson scheme (default: 1e-5)
@@ -202,7 +202,7 @@ class NewmarkImplicitForce(BaseSolverABC):
 
             # add to results
             if t == self.state.output_time_indices[t2]:
-                self.state.store_step(t, u, v, a, K @ u, self.force.F)
+                self.state.store_step(t2, u, v, a, K @ u, self.force.F)
                 t2 += 1
 
         # close the progress bar
@@ -224,11 +224,11 @@ class NewmarkExplicit(BaseSolverABC):
         Constructor of the Explicit Newmark Solver.
 
         Args:
-            force (Optional[Force]): Force definitions (default: creates new Force())
-            state (Optional[State]): Solver state (default: creates new State())
+            force (Optional[Force]): Force definitions (default: None)
+            state (Optional[State]): Solver state (default: None)
             beta (float): Newmark numerical stability parameter (default: 0.25)
             gamma (float): Newmark numerical stability parameter (default: 0.5)
-            linear_solver (Optional[LinearSolversABC]): Linear solver to be used (default: SparseDirectSolverLU())
+            linear_solver (Optional[LinearSolversABC]): Linear solver to be used (default: None)
             preconditioner (Optional[PreconditionerABC]): Preconditioner to be used (default: None)
         """
         self.beta = beta
@@ -275,8 +275,7 @@ class NewmarkExplicit(BaseSolverABC):
         M, C, K = self.state.check_for_sparse(M, C, K)
 
         # calculate time step size
-        t_step = (self.state.time[t_end_idx] - self.state.time[t_start_idx]) / (
-            (t_end_idx - t_start_idx))
+        t_step = (self.state.time[t_end_idx] - self.state.time[t_start_idx]) / ((t_end_idx - t_start_idx))
 
         # constants for the Newmark integration
         beta = self.beta
@@ -363,7 +362,7 @@ class NewmarkExplicit(BaseSolverABC):
 
             # add to results
             if t == self.state.output_time_indices[t2]:
-                self.state.store_step(t, u, v, a, K @ u, self.force.F)
+                self.state.store_step(t2, u, v, a, K @ u, self.force.F)
                 t2 += 1
 
         # close the progress bar

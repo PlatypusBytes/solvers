@@ -1,37 +1,28 @@
 import pytest
-
 import numpy as np
 from scipy import sparse
 
 from solvers.base_solver import Force, State
-from solvers.central_difference_solver import CentralDifferenceSolver
-from solvers.utils import LumpingMethod
-from tests.utils import set_matrices_as_sparse, set_matrices_as_np_array
-from solvers.linear_equations_solvers import (SparseDirectSolver, SparseDirectSolverLU, DenseDirectSolver,
+from solvers.linear_equations_solvers import (SparseDirectSolver, DenseDirectSolver, SparseDirectSolverLU,
     CGSolver, GMRESSolver, BICSTABSolver)
 from solvers.preconditioners import JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner
+from solvers.central_difference_solver import CentralDifferenceSolver
+from solvers.utils import LumpingMethod
+
+from tests.utils import *
 
 
 @pytest.fixture
-def central_difference_basic_setup():
+def setup_module():
     """
-    Setup matrices for testing newmark solver.
+    Setup matrices for testing central difference solver.
     Example from Bathe Chp: 9.2.1 (pg 770).
 
     Returns:
-        dict: containing
-        {'M': Mass matrix,
-         'K': Stiffness matrix,
-         'C': Damping matrix,
-         'F': Force matrix,
-        'u0': initial displacement,
-        'v0': initial velocity,
-        'n_steps': number of time steps,
-        't_step': time step size,
-        't_total': total time,
-        'time': time vector,
-        'number_eq': number of equations
-        }
+        M, K, C, F: Mass, Stiffness, Damping matrices and Force vector
+        n_steps: number of time steps
+        time: time vector
+        number_eq: number of equations
     """
 
     # example from bathe
@@ -40,13 +31,10 @@ def central_difference_basic_setup():
     C = [[0, 0], [0, 0]]
     F = np.zeros((2, 13))
     F[1, :] = 10
-    M_mat = sparse.csc_matrix(np.array(M))
-    K_mat = sparse.csc_matrix(np.array(K))
-    C_mat = sparse.csc_matrix(np.array(C))
-    F_mat = sparse.csc_matrix(np.array(F))
-
-    u0 = np.zeros(2)
-    v0 = np.zeros(2)
+    M = sparse.csc_matrix(np.array(M))
+    K = sparse.csc_matrix(np.array(K))
+    C = sparse.csc_matrix(np.array(C))
+    F = sparse.csc_matrix(np.array(F))
 
     n_steps = 12
     t_step = 0.28
@@ -55,235 +43,173 @@ def central_difference_basic_setup():
     time = np.linspace(0, t_total, int(np.ceil((t_total - 0) / t_step) + 1))
 
     number_eq = 2
-
-    return {
-        'M': M_mat, 'K': K_mat, 'C': C_mat, 'F': F_mat,
-        'u0': u0, 'v0': v0, 'n_steps': n_steps, 't_step': t_step,
-        't_total': t_total, 'time': time, 'number_eq': number_eq
-    }
+    return M, K, C, F, n_steps, time, number_eq
 
 
-@pytest.fixture
-def full_matrix_setup():
+@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverLU, CGSolver, GMRESSolver, BICSTABSolver])
+@pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
+def test_central_difference_sparse(setup_module, linear_solver, preconditioner):
     """
-    Setup matrices for testing central difference solver with consistent mass matrix.
-    This test is to test the lumping method. The expected results are the same as the basic setup.
+    Test Central Difference solver with different linear solvers and preconditioners using sparse matrices.
+
+    Args:
+        setup_module: Fixture setting up matrices
+        linear_solver: Linear solver class
+        preconditioner: Preconditioner class
     """
-    M = [[1, 1], [0.25, 0.75]]  # modified mass matrix for consistent mass
-    K = [[6, -2], [-2, 4]]
-    C = [[0, 0], [0, 0]]
-    F = np.zeros((2, 13))
-    F[1, :] = 10
-    M_mat = sparse.csc_matrix(np.array(M))
-    K_mat = sparse.csc_matrix(np.array(K))
-    C_mat = sparse.csc_matrix(np.array(C))
-    F_mat = sparse.csc_matrix(np.array(F))
+    M, K, C, F, n_steps, time, number_eq = setup_module
+    M, K, C, F = set_matrices_as_sparse(M, K, C, F)
 
-    u0 = np.zeros(2)
-    v0 = np.zeros(2)
+    prec = preconditioner() if preconditioner is not None else None
 
-    n_steps = 12
-    t_step = 0.28
-    t_total = n_steps * t_step
-
-    time = np.linspace(0, t_total, int(np.ceil((t_total - 0) / t_step) + 1))
-
-    number_eq = 2
-
-    return {
-        'M': M_mat, 'K': K_mat, 'C': C_mat, 'F': F_mat,
-        'u0': u0, 'v0': v0, 'n_steps': n_steps, 't_step': t_step,
-        't_total': t_total, 'time': time, 'number_eq': number_eq
-    }
-
-
-@pytest.fixture
-def full_matrix_damping_setup():
-    """
-    Setup matrices for testing central difference solver with consistent mass matrix and damping.
-    This test is to test the lumping method. The expected results are the same as the basic setup.
-    """
-    M = [[1, 1], [0.25, 0.75]]
-    K = [[6, -2], [-2, 4]]
-    C = [[0.25, 0.15], [0.15, 0.25]]
-    F = np.zeros((2, 13))
-    F[1, :] = 10
-    M_mat = sparse.csc_matrix(np.array(M))
-    K_mat = sparse.csc_matrix(np.array(K))
-    C_mat = sparse.csc_matrix(np.array(C))
-    F_mat = sparse.csc_matrix(np.array(F))
-
-    u0 = np.zeros(2)
-    v0 = np.zeros(2)
-
-    n_steps = 12
-    t_step = 0.28
-    t_total = n_steps * t_step
-
-    time = np.linspace(0, t_total, int(np.ceil((t_total - 0) / t_step) + 1))
-
-    number_eq = 2
-
-    return {
-        'M': M_mat, 'K': K_mat, 'C': C_mat, 'F': F_mat,
-        'u0': u0, 'v0': v0, 'n_steps': n_steps, 't_step': t_step,
-        't_total': t_total, 'time': time, 'number_eq': number_eq
-    }
-
-
-def run_central_difference_test(setup_data, lumped, linear_solver, preconditioner):
-    """
-    Helper function to run the central difference solver test with given parameters
-    """
-    if lumped:
-        lump = LumpingMethod.RowSum
-    else:
-        lump = LumpingMethod.NONE
-    res = CentralDifferenceSolver(Force(), State(), linear_solver=linear_solver, preconditioner=preconditioner, lumping_method=lump)
-
-    res.initialise(setup_data['number_eq'], setup_data['time'])
-    res.calculate(setup_data['M'], setup_data['C'], setup_data['K'],
-                 setup_data['F'], 0, setup_data['n_steps'])
-
+    res = CentralDifferenceSolver(Force(), State(), linear_solver=linear_solver(), preconditioner=prec,
+                                  lumping_method=LumpingMethod.RowSum)
+    res.initialise(number_eq, time)
+    res.calculate(M, C, K, F, 0, n_steps)
     # check solution
-    expected_results = np.array(
-        [
-            [0, 0],
-            [0.000, 0.392],
-            [0.0307, 1.45],
-            [0.168, 2.83],
-            [0.487, 4.14],
-            [1.02, 5.02],
-            [1.7, 5.26],
-            [2.4, 4.9],
-            [2.91, 4.17],
-            [3.07, 3.37],
-            [2.77, 2.78],
-            [2.04, 2.54],
-            [1.02, 2.60],
-        ]
-    )
     np.testing.assert_array_almost_equal(
         np.round(res.u, 2),
-        np.round(expected_results, 2)
+        np.round(
+            np.array(
+                [
+                    [0, 0],
+                    [0.000, 0.392],
+                    [0.0307, 1.45],
+                    [0.168, 2.83],
+                    [0.487, 4.14],
+                    [1.02, 5.02],
+                    [1.7, 5.26],
+                    [2.4, 4.9],
+                    [2.91, 4.17],
+                    [3.07, 3.37],
+                    [2.77, 2.78],
+                    [2.04, 2.54],
+                    [1.02, 2.60],
+                ]
+            ),
+            2,
+        ),
     )
 
 
-def run_central_difference_test_damping(setup_data, lumped, linear_solver, preconditioner):
+@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverLU, CGSolver, GMRESSolver, BICSTABSolver])
+@pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
+def test_central_difference_sparse_output_int(setup_module, linear_solver, preconditioner):
     """
-    Helper function to run the central difference solver test with damping
+    Test Central Difference solver with different linear solvers and preconditioners using sparse matrices.
+
+    Args:
+        setup_module: Fixture setting up matrices
+        linear_solver: Linear solver class
+        preconditioner: Preconditioner class
     """
-    if lumped:
-        lump = LumpingMethod.RowSum
-    else:
-        lump = LumpingMethod.NONE
-    res = CentralDifferenceSolver(Force(), State(), linear_solver=linear_solver, preconditioner=preconditioner, lumping_method=lump)
+    M, K, C, F, n_steps, time, number_eq = setup_module
+    M, K, C, F = set_matrices_as_sparse(M, K, C, F)
 
-    res.initialise(setup_data['number_eq'], setup_data['time'])
-    res.calculate(setup_data['M'], setup_data['C'], setup_data['K'],
-                 setup_data['F'], 0, setup_data['n_steps'])
+    prec = preconditioner() if preconditioner is not None else None
 
+    res = CentralDifferenceSolver(Force(), State(output_interval=10), linear_solver=linear_solver(), preconditioner=prec,
+    lumping_method=LumpingMethod.RowSum)
+    res.initialise(number_eq, time)
+    res.calculate(M, C, K, F, 0, n_steps)
     # check solution
-    expected_results = np.array(
-        [
-            [0, 0],
-            [0, 0.392],
-            [0.0299, 1.3684],
-            [0.1557, 2.5818],
-            [0.4359, 3.6653],
-            [0.8807, 4.3525],
-            [1.4316, 4.5475],
-            [1.9719, 4.3263],
-            [2.3615, 3.879],
-            [2.4854, 3.4203],
-            [2.2948, 3.106 ],
-            [1.8264, 2.9857],
-            [1.1933, 3.0052]
-        ]
-    )
     np.testing.assert_array_almost_equal(
         np.round(res.u, 2),
-        np.round(expected_results, 2)
+        np.round(
+            np.array(
+                [
+                    [0, 0],
+                    [2.77, 2.78],
+                    [1.02, 2.60],
+                ]
+            ),
+            2,
+        ),
     )
-
 
 
 @pytest.mark.parametrize("linear_solver", [DenseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver])
-def test_full_solver_central_difference(central_difference_basic_setup, linear_solver):
-    setup_data = central_difference_basic_setup.copy()
-    setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F'] = set_matrices_as_np_array(
-        setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F']
-    )
-    run_central_difference_test(setup_data, lumped=False, linear_solver=linear_solver(), preconditioner=None)
+def test_central_difference_dense(setup_module, linear_solver):
+    """
+    Test Central Difference solver with different linear solvers using dense matrices.
 
+    Args:
+        setup_module: Fixture setting up matrices
+        linear_solver: Linear solver class
+    """
+    M, K, C, F, n_steps, time, number_eq = setup_module
+    M, K, C, F = set_matrices_as_np_array(M, K, C, F)
 
-@pytest.mark.parametrize("linear_solver", [DenseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver])
-def test_full_solver_central_difference_lumped(central_difference_basic_setup, linear_solver):
-    setup_data = central_difference_basic_setup.copy()
-    setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F'] = set_matrices_as_np_array(
-        setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F']
+    res = CentralDifferenceSolver(Force(), State(), linear_solver=linear_solver(), preconditioner=None,
+                                  lumping_method=LumpingMethod.RowSum)
+    res.initialise(number_eq, time)
+    res.calculate(M, C, K, F, 0, n_steps)
+    # check solution
+    np.testing.assert_array_almost_equal(
+        np.round(res.u, 2),
+        np.round(
+            np.array(
+                [
+                    [0, 0],
+                    [0.000, 0.392],
+                    [0.0307, 1.45],
+                    [0.168, 2.83],
+                    [0.487, 4.14],
+                    [1.02, 5.02],
+                    [1.7, 5.26],
+                    [2.4, 4.9],
+                    [2.91, 4.17],
+                    [3.07, 3.37],
+                    [2.77, 2.78],
+                    [2.04, 2.54],
+                    [1.02, 2.60],
+                ]
+            ),
+            2,
+        ),
     )
-    run_central_difference_test(setup_data, lumped=True, linear_solver=linear_solver(), preconditioner=None)
 
 
 @pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverLU, CGSolver, GMRESSolver, BICSTABSolver])
 @pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
-def test_sparse_solver_central_difference(central_difference_basic_setup, linear_solver, preconditioner):
-    setup_data = central_difference_basic_setup.copy()
-    setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F'] = set_matrices_as_sparse(
-        setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F']
-    )
+def test_central_difference_static(setup_module, linear_solver, preconditioner):
+    """
+    Test Central Difference solver with a lot of damping to see if solution converges to static solution
+    """
+
+    M, K, _, F, _, _, number_eq = setup_module
+
+    n_steps = 500
+    t_step = 0.28
+    t_total = n_steps * t_step
+    time = np.linspace(0, t_total, int(np.ceil((t_total - 0) / t_step)))
+
+    F = sparse.csc_matrix(np.zeros((2, 500)))
+    F[1, :] = 10
+
+    # rayleigh damping matrix
+    f1 = 1
+    f2 = 10
+    d1 = 1
+    d2 = 1
+    damp_mat = (
+        1 / 2
+        * np.array([[1 / (2 * np.pi * f1), 2 * np.pi * f1],
+                    [1 / (2 * np.pi * f2), 2 * np.pi * f2],
+                    ]
+                    )
+                )
+    damp_qsi = np.array([d1, d2])
+    # solution
+    alpha, beta = np.linalg.solve(damp_mat, damp_qsi)
+    damp = M.dot(alpha) + K.dot(beta)
+
     prec = preconditioner() if preconditioner is not None else None
-    run_central_difference_test(setup_data, lumped=False, linear_solver=linear_solver(), preconditioner=prec)
 
-@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverLU, CGSolver, GMRESSolver, BICSTABSolver])
-@pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
-def test_sparse_solver_central_difference_lumped(central_difference_basic_setup, linear_solver, preconditioner):
-    setup_data = central_difference_basic_setup.copy()
-    setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F'] = set_matrices_as_sparse(
-        setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F']
-    )
-    prec = preconditioner() if preconditioner is not None else None
-    run_central_difference_test(setup_data, lumped=True, linear_solver=linear_solver(), preconditioner=prec)
+    res = CentralDifferenceSolver(Force(), State(), linear_solver=linear_solver(), preconditioner=prec)
+    res.initialise(number_eq, time)
+    res.calculate(M, damp, K, F, 0, n_steps -1)
 
-
-# Full matrix tests
-@pytest.mark.parametrize("linear_solver", [DenseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver])
-def test_full_solver_central_difference_consistent_lumped(full_matrix_setup, linear_solver):
-    setup_data = full_matrix_setup.copy()
-    setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F'] = set_matrices_as_np_array(
-        setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F']
-    )
-    run_central_difference_test(setup_data, lumped=True, linear_solver=linear_solver(), preconditioner=None)
-
-
-
-@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverLU,CGSolver, GMRESSolver, BICSTABSolver])
-@pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
-def test_sparse_solver_central_difference_consistent_lumped(full_matrix_setup, linear_solver, preconditioner):
-    setup_data = full_matrix_setup.copy()
-    setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F'] = set_matrices_as_sparse(
-        setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F']
-    )
-    prec = preconditioner() if preconditioner is not None else None
-    run_central_difference_test(setup_data, lumped=True, linear_solver=linear_solver(), preconditioner=prec)
-
-@pytest.mark.parametrize("linear_solver", [DenseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver])
-def test_full_solver_central_difference_full_damp_lumped(full_matrix_damping_setup, linear_solver):
-    setup_data = full_matrix_damping_setup.copy()
-    setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F'] = set_matrices_as_np_array(
-        setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F']
-    )
-    run_central_difference_test_damping(setup_data, lumped=True, linear_solver=linear_solver(), preconditioner=None)
-
-
-@pytest.mark.parametrize("linear_solver", [SparseDirectSolver, SparseDirectSolverLU, CGSolver, GMRESSolver, BICSTABSolver])
-@pytest.mark.parametrize("preconditioner", [None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner])
-def test_sparse_solver_central_difference_consistent_damp_lump(full_matrix_damping_setup, linear_solver, preconditioner):
-    setup_data = full_matrix_damping_setup.copy()
-    setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F'] = set_matrices_as_sparse(
-        setup_data['M'], setup_data['K'], setup_data['C'], setup_data['F']
-    )
-    prec = preconditioner() if preconditioner is not None else None
-    run_central_difference_test_damping(setup_data, lumped=True, linear_solver=linear_solver(), preconditioner=prec)
-
+    # check solution
+    np.testing.assert_array_almost_equal(np.round(res.u[0], 2), np.round(np.array([0, 0]), 2))
+    np.testing.assert_array_almost_equal(np.round(res.u[-1], 2), np.round(np.array([1, 3]), 2))

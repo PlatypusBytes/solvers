@@ -22,9 +22,9 @@ class StaticSolver(BaseSolverABC):
         Constructor of the Static Solver class.
 
         Args:
-            force (Optional[Force]): Force definitions (default: creates new Force())
-            state (Optional[State]): Solver state (default: creates new State())
-            linear_solver (Optional[LinearSolversABC]): Linear solver to be used (default: SparseDirectSolverLU())
+            force (Optional[Force]): Force definitions (default: None)
+            state (Optional[State]): Solver state (default: None)
+            linear_solver (Optional[LinearSolversABC]): Linear solver to be used (default: None)
             preconditioner (Optional[PreconditionerABC]): Preconditioner to be used (default: None)
         """
         self.linear_solver = linear_solver if linear_solver is not None else SparseDirectSolverLU()
@@ -116,7 +116,7 @@ class StaticSolver(BaseSolverABC):
             # add to results
             # add to results
             if t == self.state.output_time_indices[t2]:
-                self.state.store_step(t, u, None, None, K @ u, self.force.F)
+                self.state.store_step(t2, u, None, None, K @ u, self.force.F)
                 t2 += 1
 
             d_force_ini = 0

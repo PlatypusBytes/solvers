@@ -153,19 +153,15 @@ class State:
             F (npt.NDArray[np.float64]): External force vector at time t_index
         """
 
-        match = np.where(self.output_time_indices == t_index)[0]
-        if match.size == 0:
-            return
-
-        self.u[match[0]] = u
-        self.v[match[0]] = v
-        self.a[match[0]] = a
-        self.f[match[0]] = f
-        self.F_out[match[0]] = F
+        self.u[t_index] = u
+        self.v[t_index] = v
+        self.a[t_index] = a
+        self.f[t_index] = f
+        self.F_out[t_index] = F
 
     def update_initial_conditions(self, t_start_idx: int):
         """
-        Updates the stage on a certain stage.
+        Updates the initial conditions on a certain stage.
         Initial conditions are retrieved from previously calculated values for
         displacements and velocities.
 
@@ -353,7 +349,7 @@ def calculate_initial_acceleration(m_global: Matrix,
                                    u: npt.NDArray[np.float64],
                                    v: npt.NDArray[np.float64],
                                    linear_solver: LinearSolversABC,
-                                   preconditioner: PreconditionerABC) -> npt.NDArray[np.float64]:
+                                   preconditioner: Optional[PreconditionerABC]) -> npt.NDArray[np.float64]:
     r"""
     Calculation of the initial conditions - acceleration for the first time-step.
 

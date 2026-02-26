@@ -24,10 +24,10 @@ class HHTImplicitForce(BaseSolverABC):
         Initializes the HHT implicit solver with given parameters.
 
         Args:
-            force (Force | None): Force definitions (default: creates new Force())
-            state (State | None): Solver state (default: creates new State())
-            linear_solver (LinearSolversABC | None): Linear solver instance (default: SparseDirectSolverLU())
-            preconditioner (PreconditionerABC | None): Preconditioner instance (default: None)
+            force (Optional[Force]): Force definitions (default: None)
+            state (Optional[State]): Solver state (default: None)
+            linear_solver (Optional[LinearSolversABC]): Linear solver instance (default: None)
+            preconditioner (Optional[PreconditionerABC]): Preconditioner instance (default: None)
             alpha (float): HHT alpha parameter for numerical dissipation.
             max_iter (int): Maximum number of iterations for the Newton-Raphson method.
             tolerance (float): Convergence tolerance for the Newton-Raphson method.
@@ -198,7 +198,7 @@ class HHTImplicitForce(BaseSolverABC):
 
             # add to results
             if t == self.state.output_time_indices[t2]:
-                self.state.store_step(t, u, v, a, K @ u, self.force.F)
+                self.state.store_step(t2, u, v, a, K @ u, self.force.F)
                 t2 += 1
 
         # close the progress bar
@@ -220,10 +220,10 @@ class HHTExplicit(BaseSolverABC):
         Initializes the HHT explicit solver with given parameters.
 
         Args:
-            force (Force | None): Force definitions (default: creates new Force())
-            state (State | None): Solver state (default: creates new State())
-            linear_solver (LinearSolversABC | None): Linear solver instance (default: SparseDirectSolverLU())
-            preconditioner (PreconditionerABC | None): Preconditioner instance (default: None)
+            force (Optional[Force]): Force definitions (default: None)
+            state (Optional[State]): Solver state (default: None)
+            linear_solver (Optional[LinearSolversABC]): Linear solver instance (default: None)
+            preconditioner (Optional[PreconditionerABC]): Preconditioner instance (default: None)
             alpha (float): HHT alpha parameter for numerical dissipation.
         """
         self.force = force if force is not None else Force()
@@ -251,13 +251,13 @@ class HHTExplicit(BaseSolverABC):
         Newmark integration scheme.
         Incremental formulation.
 
-        :param M: Mass matrix
-        :param C: Damping matrix
-        :param K: Stiffness matrix
-        :param F: External force matrix
-        :param t_start_idx: time index of starting time for the stage analysis
-        :param t_end_idx: time index of end time for the stage analysis
-        :return:
+        Args:
+            M (Matrix): Mass matrix
+            C (Matrix): Damping matrix
+            K (Matrix): Stiffness matrix
+            F (Matrix): External force matrix
+            t_start_idx (int): time index of starting time for the stage analysis
+            t_end_idx (int): time index of end time for the stage analysis
         """
         # initialize force for the stage
         self.force.initialise_stage(F)
@@ -266,7 +266,6 @@ class HHTExplicit(BaseSolverABC):
 
         # update output arrays for the stage
         self.state.update_output_arrays(t_start_idx, t_end_idx)
-
 
         # check if sparse calculation should be performed
         M, C, K = self.state.check_for_sparse(M, C, K)
@@ -356,7 +355,7 @@ class HHTExplicit(BaseSolverABC):
 
             # add to results
             if t == self.state.output_time_indices[t2]:
-                self.state.store_step(t, u, v, a, K @ u, self.force.F)
+                self.state.store_step(t2, u, v, a, K @ u, self.force.F)
                 t2 += 1
 
         # close the progress bar

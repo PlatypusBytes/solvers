@@ -22,9 +22,9 @@ class ZhaiSolver(BaseSolverABC):
         Initialisation of the Zhai Solver class.
 
         Args:
-            force (Optional[Force]): Force definitions (default: creates new Force())
-            state (Optional[State]): Solver state (default: creates new State())
-            linear_solver (Optional[LinearSolversABC]): Linear solver to be used (default: SparseDirectSolverLU())
+            force (Optional[Force]): Force definitions (default: None)
+            state (Optional[State]): Solver state (default: None)
+            linear_solver (Optional[LinearSolversABC]): Linear solver to be used (default: None)
             preconditioner (Optional[PreconditionerABC]): Preconditioner to be used (default: None)
         """
         self.linear_solver = linear_solver if linear_solver is not None else SparseDirectSolverLU()
@@ -47,17 +47,21 @@ class ZhaiSolver(BaseSolverABC):
         """
         self.state.initialise(number_eq, time)
 
-    def prediction(self, u, v, a, a_old, dt, is_initial):
+    def prediction(self, u: npt.NDArray[np.float64], v: npt.NDArray[np.float64], a: npt.NDArray[np.float64],
+                   a_old: npt.NDArray[np.float64], dt: float, is_initial: bool) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         """
         Perform prediction for displacement and acceleration
 
-        :param u: displacement
-        :param v: velocity
-        :param a: acceleration
-        :param a_old: acceleration at previous time step
-        :param dt: time step size
-        :param is_initial: bool to indicate current iteration is the initial iteration
-        :return:
+        Args:
+            u (npt.NDArray[np.float64]): displacement
+            v (npt.NDArray[np.float64]): velocity
+            a (npt.NDArray[np.float64]): acceleration
+            a_old (npt.NDArray[np.float64]): acceleration at previous time step
+            dt (float): time step size
+            is_initial (bool): bool to indicate current iteration is the initial iteration
+
+        Returns:
+                tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]: Predicted displacement and velocity
         """
 
         # set Zhai factors
@@ -174,7 +178,7 @@ class ZhaiSolver(BaseSolverABC):
 
             # add to results
             if t == self.state.output_time_indices[t2]:
-                self.state.store_step(t, u_new, v_new, a_new, K @ u_new, self.force.F)
+                self.state.store_step(t2, u_new, v_new, a_new, K @ u_new, self.force.F)
                 t2 += 1
 
             # set vectors for next time step

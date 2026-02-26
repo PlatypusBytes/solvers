@@ -20,17 +20,17 @@ class BatheSolver(BaseSolverABC):
                  state: Optional[State] = None,
                  linear_solver: Optional[LinearSolversABC] = None,
                  preconditioner: Optional[PreconditionerABC] = None,
-                 lumping_method=LumpingMethod.RowSum
+                 lumping_method: LumpingMethod = LumpingMethod.DiagonalScaling
                  ):
         """
         Initialisation of the Bathe Solver class.
 
         Args:
-            force (Optional[Force]): Force definitions (default: creates new Force())
-            state (Optional[State]): Solver state (default: creates new State())
-            linear_solver (Optional[LinearSolversABC]): Linear solver to be used (default: SparseDirectSolverLU())
+            force (Optional[Force]): Force definitions (default: None)
+            state (Optional[State]): Solver state (default: None)
+            linear_solver (Optional[LinearSolversABC]): Linear solver to be used (default: None)
             preconditioner (Optional[PreconditionerABC]): Preconditioner to be used (default: None)
-            lumping_method (LumpingMethod): Lumping method to be used (default: RowSum)
+            lumping_method (LumpingMethod): Lumping method to be used (default: DiagonalScaling)
         """
         if not isinstance(lumping_method, LumpingMethod):
             raise ValueError("Lumping method must be of type LumpingMethod")
@@ -165,7 +165,7 @@ class BatheSolver(BaseSolverABC):
 
             # add to results
             if t == self.state.output_time_indices[t2]:
-                self.state.store_step(t, u, v, a, K @ u, self.force.F)
+                self.state.store_step(t2, u, v, a, K @ u, self.force.F)
                 t2 += 1
 
         # close the progress bar
