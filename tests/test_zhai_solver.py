@@ -1,102 +1,167 @@
-# unit test for solver
-# tests based on Bathe
-# for newmark pg 782
-import unittest
-from solvers.newmark_solver import NewmarkExplicit
-from solvers.zhai_solver import ZhaiSolver
-
-from tests.utils import *
+import pytest
 
 import numpy as np
 from scipy import sparse
 
-class TestZhai(unittest.TestCase):
-    def setUp(self):
-        # newmark settings
-        self.settings = {
-            "beta": 0.25,
-            "gamma": 0.5,
-        }
+from solvers.base_solver import Force, State
+from solvers.newmark_solver import NewmarkExplicit
+from solvers.zhai_solver import ZhaiSolver
+from tests.utils import (
+    set_matrices_as_sparse,
+    set_matrices_as_np_array,
+    ALL_LINEAR_SOLVERS,
+    ALL_DENSE_LINEAR_SOLVERS,
+    ALL_PRECONDITIONERS,
+)
 
-        # example from bathe
-        M = [[2, 0], [0, 1]]
-        K = [[6, -2], [-2, 4]]
-        C = [[0, 0], [0, 0]]
-        F = np.zeros((2, 13))
-        F[1, :] = 10
-        self.M = sparse.csc_matrix(np.array(M))
-        self.K = sparse.csc_matrix(np.array(K))
-        self.C = sparse.csc_matrix(np.array(C))
-        self.F = sparse.csc_matrix(np.array(F))
 
-        self.u0 = np.zeros(2)
-        self.v0 = np.zeros(2)
+@pytest.fixture
+def setup_module():
 
-        self.n_steps = 12 * 20
-        self.t_step = 0.28 / 20
-        self.t_total = self.n_steps * self.t_step
+    # edited example from bathe
+    n_steps = 12 * 20
+    t_step = 0.28 / 20
+    t_total = n_steps * t_step
 
-        self.time = np.linspace(
-            0, self.t_total, int(np.ceil((self.t_total - 0) / self.t_step) + 1)
-        )
+    M = [[2, 0], [0, 1]]
+    K = [[6, -2], [-2, 4]]
+    C = [[0, 0], [0, 0]]
+    F = np.zeros((2, n_steps + 1))
+    F[1, :] = 10
+    M = sparse.csc_matrix(np.array(M))
+    K = sparse.csc_matrix(np.array(K))
+    C = sparse.csc_matrix(np.array(C))
+    F = sparse.csc_matrix(np.array(F))
 
-        self.number_eq = 2
-        return
+    time = np.linspace(0, t_total, int(np.ceil((t_total - 0) / t_step) + 1))
 
-    def run_test_zhai_solver(self):
-        """
-        Check if results following Zhai calculation are close to Newmark results
-        :return:
-        """
+    number_eq = 2
+    return M, K, C, F, n_steps, time, number_eq
 
-        # reshape force vector
-        F = np.zeros((2, self.n_steps +1))
-        F[1, :] = 10
-        self.F = sparse.csc_matrix(np.array(F))
 
-        # calculate with Newmark solver
-        expected = NewmarkExplicit()
-        expected.initialise(self.number_eq, self.time)
-        expected.calculate(self.M, self.C, self.K, self.F, 0, self.n_steps)
+@pytest.mark.parametrize("linear_solver", ALL_LINEAR_SOLVERS)
+@pytest.mark.parametrize("preconditioner", ALL_PRECONDITIONERS)
+def test_zhai_sparse(setup_module, linear_solver, preconditioner):
+    """
+    Check if results following Zhai calculation are close to Newmark results for sparse matrices.
 
-        # calculate with Zhai solver
-        res = ZhaiSolver()
-        res.initialise(self.number_eq, self.time)
-        res.calculate(self.M, self.C, self.K, self.F, 0, self.n_steps)
+    Args:
+        setup_module: Fixture to setup the module
+        linear_solver: Linear solver to use
+        preconditioner: Preconditioner to use
+    """
 
-        # assert
-        np.testing.assert_array_almost_equal(np.round(expected.u, 2), np.round(res.u, 2))
+    # run Newmark solver
+    M, K, C, F, n_steps, time, number_eq = setup_module
+    M, K, C, F = set_matrices_as_sparse(M, K, C, F)
 
-    def test_sparse_solver_zhai(self):
-        self.M, self.K, self.C, self.F = set_matrices_as_sparse(self.M, self.K, self.C, self.F)
-        # set_matrices_as_sparse()
-        self.run_test_zhai_solver()
+    prec = preconditioner() if preconditioner is not None else None
 
-    def test_np_array_solver_zhai(self):
-        self.M, self.K, self.C, self.F = set_matrices_as_np_array(self.M, self.K, self.C, self.F)
-        self.run_test_zhai_solver()
+    res = NewmarkExplicit(Force(), State(), linear_solver=linear_solver(), preconditioner=prec)
+    res.initialise(number_eq, time)
+    res.calculate(M, C, K, F, 0, n_steps)
 
-    def test_output_interval_zhai(self):
-        self.M, self.K, self.C, self.F = set_matrices_as_np_array(self.M, self.K, self.C, self.F)
 
-        # reshape force vector
-        F = np.zeros((2, self.n_steps + 1))
-        F[1, :] = 10
-        self.F = sparse.csc_matrix(np.array(F))
+    # run Zhai solver
+    res_2 = ZhaiSolver(Force(), State(), linear_solver=linear_solver(), preconditioner=prec)
+    res_2.initialise(number_eq, time)
+    res_2.calculate(M, C, K, F, 0, n_steps)
 
-        output_interval = 10
+    # assert
+    np.testing.assert_array_almost_equal(np.round(res.u, 2), np.round(res_2.u, 2))
 
-        # write all output
-        res = ZhaiSolver()
-        res.initialise(self.number_eq, self.time)
-        res.calculate(self.M, self.C, self.K, self.F, 0, self.n_steps)
-        expected_displacement = res.u[0::output_interval,:]
 
-        # write every other step
-        res_2 = ZhaiSolver()
-        res_2.output_interval = output_interval
-        res_2.initialise(self.number_eq, self.time)
-        res_2.calculate(self.M, self.C, self.K, self.F, 0, self.n_steps)
+@pytest.mark.parametrize("linear_solver", ALL_LINEAR_SOLVERS)
+@pytest.mark.parametrize("preconditioner", ALL_PRECONDITIONERS)
+def test_zhai_sparse_output_int(setup_module, linear_solver, preconditioner):
+    """
+    Check if results following Zhai calculation are close to Newmark results for sparse matrices.
 
-        # assert
-        np.testing.assert_array_almost_equal(expected_displacement, res_2.u)
+    Args:
+        setup_module: Fixture to setup the module
+        linear_solver: Linear solver to use
+        preconditioner: Preconditioner to use
+    """
+
+    # run Newmark solver
+    M, K, C, F, n_steps, time, number_eq = setup_module
+    M, K, C, F = set_matrices_as_sparse(M, K, C, F)
+
+    prec = preconditioner() if preconditioner is not None else None
+
+    res = NewmarkExplicit(Force(), State(output_interval=10), linear_solver=linear_solver(), preconditioner=prec)
+    res.initialise(number_eq, time)
+    res.calculate(M, C, K, F, 0, n_steps)
+
+
+    # run Zhai solver
+    res_2 = ZhaiSolver(Force(), State(output_interval=10), linear_solver=linear_solver(), preconditioner=prec)
+    res_2.initialise(number_eq, time)
+    res_2.calculate(M, C, K, F, 0, n_steps)
+
+    # assert
+    np.testing.assert_array_almost_equal(np.round(res.u, 2), np.round(res_2.u, 2))
+
+
+@pytest.mark.parametrize("linear_solver", ALL_DENSE_LINEAR_SOLVERS)
+def test_zhai_dense(setup_module, linear_solver):
+    """
+    Check if results following Zhai calculation are close to Newmark results for np.array matrices.
+
+    Args:
+        setup_module: Fixture to setup the module
+        linear_solver: Linear solver to use
+    """
+
+    # run Newmark solver
+    M, K, C, F, n_steps, time, number_eq = setup_module
+    M, K, C, F = set_matrices_as_np_array(M, K, C, F)
+
+    res = NewmarkExplicit(Force(), State(), linear_solver=linear_solver(), preconditioner=None)
+    res.initialise(number_eq, time)
+    res.calculate(M, C, K, F, 0, n_steps)
+
+
+    # run Zhai solver
+    res_2 = ZhaiSolver(Force(), State(), linear_solver=linear_solver(), preconditioner=None)
+    res_2.initialise(number_eq, time)
+    res_2.calculate(M, C, K, F, 0, n_steps)
+
+    # assert
+    np.testing.assert_array_almost_equal(np.round(res.u, 2), np.round(res_2.u, 2))
+
+
+@pytest.mark.parametrize("linear_solver", ALL_LINEAR_SOLVERS)
+@pytest.mark.parametrize("preconditioner", ALL_PRECONDITIONERS)
+def test_zhai_sparse_two_stages(setup_module, linear_solver, preconditioner):
+    """
+    Check if results following Zhai calculation are close to Newmark results for sparse matrices for two stages.
+
+    Args:
+        setup_module: Fixture to setup the module
+        linear_solver: Linear solver to use
+        preconditioner: Preconditioner to use
+    """
+
+    # run Newmark solver
+    M, K, C, F, n_steps, time, number_eq = setup_module
+    M, K, C, F = set_matrices_as_sparse(M, K, C, F)
+
+    prec = preconditioner() if preconditioner is not None else None
+
+    res = NewmarkExplicit(Force(), State(), linear_solver=linear_solver(), preconditioner=prec)
+    res.initialise(number_eq, time)
+    res.calculate(M, C, K, F, 0, n_steps // 2)
+    res.state.update_initial_conditions(n_steps // 2)
+    res.calculate(M, C, K, F, n_steps // 2, n_steps)
+
+
+    # run Zhai solver
+    res_2 = ZhaiSolver(Force(), State(), linear_solver=linear_solver(), preconditioner=prec)
+    res_2.initialise(number_eq, time)
+    res_2.calculate(M, C, K, F, 0, n_steps // 2)
+    res_2.state.update_initial_conditions(n_steps // 2)
+    res_2.calculate(M, C, K, F, n_steps // 2, n_steps)
+
+    # assert
+    np.testing.assert_array_almost_equal(np.round(res.u, 2), np.round(res_2.u, 2))
