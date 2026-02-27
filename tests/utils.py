@@ -39,5 +39,5 @@ def set_matrices_as_np_array(M, K, C, F):
 ALL_LINEAR_SOLVERS: Final = (SparseDirectSolver, SparseDirectSolverLU, CGSolver, GMRESSolver, BICSTABSolver)
 ALL_PRECONDITIONERS: Final = (None, JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner)
 ALL_LUMPING_METHODS: Final = (LumpingMethod.NONE, LumpingMethod.RowSum)
-ALL_SPARSE_LINEAR_SOLVERS: Final = (SparseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver)
+ALL_DENSE_LINEAR_SOLVERS: Final = (SparseDirectSolver, CGSolver, GMRESSolver, BICSTABSolver)
 ALL_DYNAMIC_SOLVERS: Final = [NewmarkExplicit, NewmarkImplicitForce, CentralDifferenceSolver, BatheSolver, HHTImplicitForce, HHTExplicit, ZhaiSolver]

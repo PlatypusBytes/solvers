@@ -10,7 +10,7 @@ from tests.utils import (
     set_matrices_as_sparse,
     set_matrices_as_np_array,
     ALL_LINEAR_SOLVERS,
-    ALL_SPARSE_LINEAR_SOLVERS,
+    ALL_DENSE_LINEAR_SOLVERS,
     ALL_PRECONDITIONERS,
 )
 
@@ -103,7 +103,7 @@ def test_zhai_sparse_output_int(setup_module, linear_solver, preconditioner):
     np.testing.assert_array_almost_equal(np.round(res.u, 2), np.round(res_2.u, 2))
 
 
-@pytest.mark.parametrize("linear_solver", ALL_SPARSE_LINEAR_SOLVERS)
+@pytest.mark.parametrize("linear_solver", ALL_DENSE_LINEAR_SOLVERS)
 def test_zhai_dense(setup_module, linear_solver):
     """
     Check if results following Zhai calculation are close to Newmark results for np.array matrices.

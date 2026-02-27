@@ -5,7 +5,7 @@ from scipy import sparse
 
 from solvers.static_solver import StaticSolver
 from solvers.base_solver import Force, State
-from tests.utils import ALL_LINEAR_SOLVERS, ALL_PRECONDITIONERS, ALL_SPARSE_LINEAR_SOLVERS
+from tests.utils import ALL_LINEAR_SOLVERS, ALL_PRECONDITIONERS, ALL_DENSE_LINEAR_SOLVERS
 
 
 @pytest.fixture
@@ -176,7 +176,7 @@ def test_solver_static_sparse_output_int_staged(setup_module, linear_solver, pre
     )
 
 
-@pytest.mark.parametrize("linear_solver", ALL_SPARSE_LINEAR_SOLVERS)
+@pytest.mark.parametrize("linear_solver", ALL_DENSE_LINEAR_SOLVERS)
 def test_solver_static_np_array(setup_module, linear_solver):
     """
     Static solver test with numpy array matrices

@@ -12,7 +12,7 @@ from solvers.HHT_solver import HHTImplicitForce, HHTExplicit
 from solvers.zhai_solver import ZhaiSolver
 from solvers.static_solver import StaticSolver
 
-from tests.utils import set_matrices_as_sparse, ALL_DYNAMIC_SOLVERS, ALL_SPARSE_LINEAR_SOLVERS, ALL_PRECONDITIONERS
+from tests.utils import set_matrices_as_sparse, ALL_DYNAMIC_SOLVERS, ALL_DENSE_LINEAR_SOLVERS, ALL_PRECONDITIONERS
 
 
 @pytest.fixture
@@ -111,7 +111,7 @@ def test_load_function(setup_module, solver):
     np.testing.assert_array_almost_equal(res_func.u, res_manual.u)
 
 
-@pytest.mark.parametrize("linear_solver", ALL_SPARSE_LINEAR_SOLVERS)
+@pytest.mark.parametrize("linear_solver", ALL_DENSE_LINEAR_SOLVERS)
 @pytest.mark.parametrize("preconditioner", ALL_PRECONDITIONERS)
 def test_initial_acceleration(setup_module, linear_solver, preconditioner):
 

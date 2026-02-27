@@ -11,7 +11,7 @@ from tests.utils import (
     set_matrices_as_np_array,
     ALL_LINEAR_SOLVERS,
     ALL_PRECONDITIONERS,
-    ALL_SPARSE_LINEAR_SOLVERS,
+    ALL_DENSE_LINEAR_SOLVERS,
 )
 
 
@@ -140,7 +140,7 @@ def test_hht_sparse_output_int(setup_module, linear_solver, preconditioner, hht)
     )
 
 
-@pytest.mark.parametrize("linear_solver", ALL_SPARSE_LINEAR_SOLVERS)
+@pytest.mark.parametrize("linear_solver", ALL_DENSE_LINEAR_SOLVERS)
 @pytest.mark.parametrize("hht", [HHTExplicit, HHTImplicitForce])
 def test_hht_dense(setup_module, linear_solver, hht):
     """

@@ -9,7 +9,7 @@ from tests.utils import (
     set_matrices_as_np_array,
     ALL_LINEAR_SOLVERS,
     ALL_PRECONDITIONERS,
-    ALL_SPARSE_LINEAR_SOLVERS
+    ALL_DENSE_LINEAR_SOLVERS
 )
 
 
@@ -188,7 +188,7 @@ def test_newmark_sparse_output_int_staged(setup_module, linear_solver, precondit
     )
 
 
-@pytest.mark.parametrize("linear_solver", ALL_SPARSE_LINEAR_SOLVERS)
+@pytest.mark.parametrize("linear_solver", ALL_DENSE_LINEAR_SOLVERS)
 @pytest.mark.parametrize("newmark", [NewmarkExplicit, NewmarkImplicitForce])
 def test_newmark_dense(setup_module, linear_solver, newmark):
     """

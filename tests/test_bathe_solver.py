@@ -12,7 +12,7 @@ from tests.utils import (
     ALL_LINEAR_SOLVERS,
     ALL_PRECONDITIONERS,
     ALL_LUMPING_METHODS,
-    ALL_SPARSE_LINEAR_SOLVERS,
+    ALL_DENSE_LINEAR_SOLVERS,
 )
 
 
@@ -140,7 +140,7 @@ def test_bathe_sparse(bathe_basic_setup, linear_solver, preconditioner, lumping_
     )
 
 
-@pytest.mark.parametrize("linear_solver", ALL_SPARSE_LINEAR_SOLVERS)
+@pytest.mark.parametrize("linear_solver", ALL_DENSE_LINEAR_SOLVERS)
 @pytest.mark.parametrize("lumping_method", ALL_LUMPING_METHODS)
 def test_bathe_dense(bathe_basic_setup, linear_solver, lumping_method):
     """
