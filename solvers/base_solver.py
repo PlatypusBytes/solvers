@@ -104,8 +104,8 @@ class State:
 
     def initialise(self, number_equations: int, time: npt.NDArray[np.float64]):
         """
-        Initialises displacement and velocity vectors
-        Initialises output time interval and output matrices
+        Initializes displacement and velocity vectors
+        Initializes output time interval and output matrices
 
         Args:
             number_equations (int): Number of equations to be solved.

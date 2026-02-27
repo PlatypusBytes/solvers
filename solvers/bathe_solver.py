@@ -64,13 +64,13 @@ class BatheSolver(BaseSolverABC):
         """
         Perform calculation with the Bathe solver.
 
-        Parameters:
-        :param M: Mass matrix
-        :param C: Damping matrix
-        :param K: Stiffness matrix
-        :param F: External force matrix
-        :param t_start_idx: time index of starting time for the analysis
-        :param t_end_idx: time index of end time for the analysis
+        Args:
+            M (Matrix): Mass matrix
+            C (Matrix): Damping matrix
+            K (Matrix): Stiffness matrix
+            F (Matrix): Force matrix
+            t_start_idx (int): Start index of the time step
+            t_end_idx (int): End index of the time step
         """
 
         # initialize force for the stage
