@@ -23,21 +23,13 @@ class LinearSolversABC(ABC):
         """
         Solve Ax = b
 
-        Parameters
-        ----------
-        A : np.ndarray or scipy.sparse matrix
-            The system matrix.
-        b : np.ndarray
-            The right-hand side vector.
-        M : LinearOperator, optional
-            Preconditioner (only for iterative solvers).
-        cache : bool, optional
-            Whether to cache factorization for repeated timesteps (only for direct solvers).
+        Args:
+            A (Union[npt.NDArray[np.float64], sp.spmatrix]): The system matrix.
+            b (npt.NDArray[np.float64]): The right-hand side vector.
+            M (Optional[PreconditionerABC]): Preconditioner (only for iterative solvers).
 
-        Returns
-        -------
-        x : np.ndarray
-            The solution vector.
+        Returns:
+            npt.NDArray[np.float64]: The solution vector.
         """
         raise NotImplementedError("Subclasses should implement this!")
 
@@ -63,19 +55,12 @@ class DenseDirectSolver(LinearSolversABC):
         """
         Solve A x = b using direct inversion.
 
-        Parameters
-        ----------
-        A : np.ndarray
-            The system matrix.
-        b : np.ndarray
-            The right-hand side vector.
-        M : LinearOperator, optional
-            Preconditioner (only for iterative solvers).
-
-        Returns
-        -------
-        x : np.ndarray
-            The solution vector.
+        Args:
+            A (npt.NDArray[np.float64]): The system matrix.
+            b (npt.NDArray[np.float64]): The right-hand side vector.
+            M (Optional[PreconditionerABC]): Preconditioner (only for iterative solvers).
+        Returns:
+            npt.NDArray[np.float64]: The solution vector.
         """
 
         if M is not None:
@@ -135,19 +120,13 @@ class SparseDirectSolverLU(LinearSolversABC):
         """
         Solve Ax = b using using direct inversion.
 
-        Parameters
-        ----------
-        A : np.ndarray or scipy.sparse matrix
-            The system matrix.
-        b : np.ndarray
-            The right-hand side vector.
-        M : LinearOperator, optional
-            Preconditioner (only for iterative solvers).
+        Args:
+            A (sp.spmatrix): The system matrix.
+            b (npt.NDArray[np.float64]): The right-hand side vector.
+            M (Optional[PreconditionerABC]): Preconditioner (only for iterative solvers).
 
-        Returns
-        -------
-        x : np.ndarray
-            The solution vector.
+        Returns:
+            npt.NDArray[np.float64]: The solution vector.
         """
         if M is not None:
             warnings.warn("Preconditioner is ignored in SparseDirectSolverLU")
@@ -184,7 +163,7 @@ class SparseDirectSolverLU(LinearSolversABC):
         self.__dict__.update(state)
         self._inverse_A = None
         self._A_id = None
-        
+
 
 class SparseDirectSolver(LinearSolversABC):
     """
@@ -204,19 +183,13 @@ class SparseDirectSolver(LinearSolversABC):
         """
         Solve Ax = b using using direct inversion.
 
-        Parameters
-        ----------
-        A : np.ndarray or scipy.sparse matrix
-            The system matrix.
-        b : np.ndarray
-            The right-hand side vector.
-        M : LinearOperator, optional
-            Preconditioner (only for iterative solvers).
+        Args:
+            A (sp.spmatrix): The system matrix.
+            b (npt.NDArray[np.float64]): The right-hand side vector.
+            M (Optional[PreconditionerABC]): Preconditioner (only for iterative solvers).
 
-        Returns
-        -------
-        x : np.ndarray
-            The solution vector.
+        Returns:
+            npt.NDArray[np.float64]: The solution vector.
         """
         if M is not None:
             warnings.warn("Preconditioner is ignored in SparseDirectSolver")
@@ -243,19 +216,13 @@ class CGSolver(LinearSolversABC):
         """
         Solve Ax = b using the Conjugate Gradient method.
 
-        Parameters
-        ----------
-        A : np.ndarray or scipy.sparse matrix
-            The system matrix.
-        b : np.ndarray
-            The right-hand side vector.
-        M : LinearOperator, optional
-            Preconditioner (only for iterative solvers).
+        Args:
+            A (sp.spmatrix): The system matrix.
+            b (npt.NDArray[np.float64]): The right-hand side vector.
+            M (Optional[PreconditionerABC]): Preconditioner (only for iterative solvers).
 
-        Returns
-        -------
-        x : np.ndarray
-            The solution vector.
+        Returns:
+            npt.NDArray[np.float64]: The solution vector.
         """
         x, info = cg(A, b, M=M, rtol=self.rtol, maxiter=self.maxiter)
         if info != 0:
@@ -282,19 +249,13 @@ class GMRESSolver(LinearSolversABC):
         """
         Solve Ax = b using the Generalized Minimal Residual (GMRES) method.
 
-        Parameters
-        ----------
-        A : np.ndarray or scipy.sparse matrix
-            The system matrix.
-        b : np.ndarray
-            The right-hand side vector.
-        M : LinearOperator, optional
-            Preconditioner (only for iterative solvers).
+        Args:
+            A (sp.spmatrix): The system matrix.
+            b (npt.NDArray[np.float64]): The right-hand side vector.
+            M (Optional[PreconditionerABC]): Preconditioner (only for iterative solvers).
 
-        Returns
-        -------
-        x : np.ndarray
-            The solution vector.
+        Returns:
+            npt.NDArray[np.float64]: The solution vector.
         """
         x, info = gmres(A, b, M=M, rtol=self.rtol, maxiter=self.maxiter)
         if info != 0:
@@ -320,19 +281,13 @@ class BICSTABSolver(LinearSolversABC):
         """
         Solve Ax = b using the Biconjugate Gradient Stabilized (BiCGSTAB) method.
 
-        Parameters
-        ----------
-        A : np.ndarray or scipy.sparse matrix
-            The system matrix.
-        b : np.ndarray
-            The right-hand side vector.
-        M : LinearOperator, optional
-            Preconditioner (only for iterative solvers).
+        Args:
+            A (sp.spmatrix): The system matrix.
+            b (npt.NDArray[np.float64]): The right-hand side vector.
+            M (Optional[PreconditionerABC]): Preconditioner (only for iterative solvers).
 
-        Returns
-        -------
-        x : np.ndarray
-            The solution vector.
+        Returns:
+            npt.NDArray[np.float64]: The solution vector.
         """
         x, info = bicgstab(A, b, M=M, rtol=self.rtol, maxiter=self.maxiter)
         if info != 0:
@@ -362,9 +317,10 @@ def get_numpy_fingerprint(A: npt.NDArray[np.float64]) -> tuple:
     Get a fingerprint of a numpy array A to identify it uniquely.
 
     Args:
-        A (np.ndarray): The numpy array.
+        A (npt.NDArray[np.float64]): The numpy array.
+
     Returns:
-        tuple: A tuple containing the id, shape, dtype, strides, and memory address of the first element.
+        tuple: A tuple containing the id, shape, dtype, strides, and memory pointer of the array.
     """
     return (
         id(A),

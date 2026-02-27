@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 
+import numpy as np
+import numpy.typing as npt
 import scipy.sparse as sp
 from scipy.sparse import tril, triu
 from scipy.sparse.linalg import LinearOperator
@@ -15,10 +17,8 @@ class PreconditionerABC(ABC):
         """
         Build the preconditioner for sparse matrix A
 
-        Parameters
-        ----------
-        A : sp.spmatrix
-            The system matrix to precondition.
+        Args:
+            A (sp.spmatrix): The system sparse matrix to precondition.
         """
         raise NotImplementedError("Subclasses should implement this!")
 
@@ -30,13 +30,11 @@ class JacobiPreconditioner(PreconditionerABC):
         """
         Builds the Jacobi preconditioner for sparse matrix A
 
-        Parameters
-        ----------
-        A : sp.spmatrix
-            The system sparse matrix to precondition.
-        Returns
-        -------
-        LinearOperator representing M^{-1}
+        Args:
+            A (sp.spmatrix): The system sparse matrix to precondition.
+
+        Returns:
+            LinearOperator representing M^{-1}
         """
         diag = A.diagonal()
         M_op = LinearOperator(shape=A.shape, matvec=lambda v: v / diag, dtype=A.dtype)
@@ -51,9 +49,8 @@ class SSORPreconditioner(PreconditionerABC):
         """
         Initializes the SSOR preconditioner with relaxation factor omega.
 
-        Parameters
-        ----------
-        omega : Relaxation factor (0 < omega < 2).
+        Args:
+            omega (float): Relaxation factor (0 < omega < 2).
         """
         if not (0.0 < omega < 2.0):
             raise ValueError("SSOR requires 0 < omega < 2")
@@ -63,13 +60,11 @@ class SSORPreconditioner(PreconditionerABC):
         """
         Builds the SSOR preconditioner for sparse matrix A
 
-        Parameters
-        ----------
-        A : sp.spmatrix
-            The system sparse matrix to precondition.
-        Returns
-        -------
-        LinearOperator representing M^{-1}
+        Args:
+            A (sp.spmatrix): The system sparse matrix to precondition.
+
+        Returns:
+            LinearOperator representing M^{-1}
         """
         D = A.diagonal()
 
@@ -90,17 +85,17 @@ class SSORPreconditioner(PreconditionerABC):
         return M_op
 
     @staticmethod
-    def __matvec_ssor(v, DL, D, DU):
+    def __matvec_ssor(v: npt.NDArray[np.float64], DL: sp.spmatrix, D: npt.NDArray[np.float64], DU: sp.spmatrix) -> npt.NDArray[np.float64]:
         """
         Perform the SSOR preconditioning operation M^{-1} * v.
 
-        Parameters
-        ----------
-        :param v: The input vector.
-        :param DL: Lower triangular matrix with modified diagonal.
-        :param D: Diagonal entries.
-        :param DU: Upper triangular matrix with modified diagonal.
-        :return: The result of M^{-1} * v.
+        Args:
+            v (npt.NDArray[np.float64]): The input vector to precondition.
+            DL (sp.spmatrix): The lower triangular part of the preconditioner.
+            D (npt.NDArray[np.float64]): The diagonal of the preconditioner.
+            DU (sp.spmatrix): The upper triangular part of the preconditioner.
+        Returns:
+            npt.NDArray[np.float64]: The preconditioned vector: M^{-1} * v.
         """
         y = spsolve_triangular(DL, v, lower=True)
         z = y / D
@@ -116,10 +111,9 @@ class ILUPreconditioner(PreconditionerABC):
         """
         Initializes the ILU preconditioner with drop tolerance and fill factor.
 
-        Parameters
-        ----------
-        drop_tol : Drop tolerance for ILU.
-        fill_factor : Fill factor for ILU.
+        Args:
+            drop_tol (float): Drop tolerance for ILU factorization.
+            fill_factor (float): Fill factor for ILU factorization.
         """
         self.drop_tol = drop_tol
         self.fill_factor = fill_factor
@@ -128,13 +122,11 @@ class ILUPreconditioner(PreconditionerABC):
         """
         Builds the ILU preconditioner for sparse matrix A
 
-        Parameters
-        ----------
-        A : sp.spmatrix
-            The system sparse matrix to precondition.
-        Returns
-        -------
-        LinearOperator representing M^{-1}
+        Args:
+            A (sp.spmatrix): The system sparse matrix to precondition.
+
+        Returns:
+            LinearOperator representing M^{-1}
         """
 
         ilu = spilu(A.tocsc(), drop_tol=self.drop_tol, fill_factor=self.fill_factor)

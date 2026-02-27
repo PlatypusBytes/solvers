@@ -48,6 +48,9 @@ class NewmarkImplicitForce(BaseSolverABC):
     def type(self) -> TimeIntegrationType:
         """
         Time integration type of the solver.
+
+        Returns:
+            TimeIntegrationType: The time integration type of the solver.
         """
         return TimeIntegrationType.DYNAMIC
 
@@ -248,6 +251,9 @@ class NewmarkExplicit(BaseSolverABC):
     def type(self) -> TimeIntegrationType:
         """
         Time integration type of the solver.
+
+        Returns:
+            TimeIntegrationType: The time integration type of the solver.
         """
         return TimeIntegrationType.DYNAMIC
 

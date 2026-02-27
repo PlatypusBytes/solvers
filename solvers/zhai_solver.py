@@ -40,6 +40,9 @@ class ZhaiSolver(BaseSolverABC):
     def type(self) -> TimeIntegrationType:
         """
         Time integration type of the solver.
+
+        Returns:
+            TimeIntegrationType: The time integration type of the solver.
         """
         return TimeIntegrationType.DYNAMIC
 
@@ -67,7 +70,7 @@ class ZhaiSolver(BaseSolverABC):
             is_initial (bool): bool to indicate current iteration is the initial iteration
 
         Returns:
-                tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]: Predicted displacement and velocity
+            tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]: Predicted displacement and velocity
         """
 
         # set Zhai factors

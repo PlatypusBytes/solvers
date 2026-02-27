@@ -1,5 +1,8 @@
 from enum import Enum
+from typing import Optional, Union
 import numpy as np
+import numpy.typing as npt
+import scipy.sparse as sp
 from scipy.sparse import isspmatrix
 
 
@@ -13,12 +16,16 @@ class LumpingMethod(Enum):
     DiagonalScaling = "DiagonalScaling"
     NONE = "None"
 
-    def apply(self, M_consistent):
+    def apply(self, M_consistent: Union[sp.spmatrix, npt.NDArray[np.float64]]) -> Optional[npt.NDArray[np.float64]]:
         """
         Apply the selected lumping method to the input consistent mass matrix.
 
-        :param M_consistent: The consistent mass matrix.
-        :return: The lumped matrix.
+        Args:
+            M_consistent (Union[sp.spmatrix, npt.NDArray[np.float64]]): The consistent mass matrix to be lumped.
+
+        Returns:
+            Optional[npt.NDArray[np.float64]]: The lumped mass matrix as a 1D array (vector) of diagonal values,
+            or None if no lumping is applied.
         """
         if self == LumpingMethod.RowSum:
             return self.row_sum(M_consistent)
@@ -28,12 +35,15 @@ class LumpingMethod(Enum):
             return None
 
     @staticmethod
-    def row_sum(M_consistent):
+    def row_sum(M_consistent: Union[sp.spmatrix, npt.NDArray[np.float64]]) -> npt.NDArray[np.float64]:
         """
         Row-sum lumping method: Each diagonal entry is the sum of the corresponding row.
 
-        :param M_consistent: The consistent mass matrix.
-        :return: The lumped matrix as a 1D array (vector) of diagonal values.
+        Args:
+            M_consistent (Union[sp.spmatrix, npt.NDArray[np.float64]]): The consistent mass matrix to be lumped.
+
+        Returns:
+            npt.NDArray[np.float64]: The lumped mass matrix as a 1D array (vector) of diagonal values.
         """
         if isspmatrix(M_consistent):
             M_lumped = np.array(M_consistent.sum(axis=1)).ravel()
@@ -42,12 +52,15 @@ class LumpingMethod(Enum):
         return M_lumped
 
     @staticmethod
-    def diagonal_scaling(M_consistent):
+    def diagonal_scaling(M_consistent: Union[sp.spmatrix, npt.NDArray[np.float64]]) -> npt.NDArray[np.float64]:
         """
         Diagonal scaling lumping: Distributes total mass proportionally to the diagonal entries.
 
-        :param M_consistent: The consistent mass matrix.
-        :return: The lumped matrix.
+        Args:
+            M_consistent (Union[sp.spmatrix, npt.NDArray[np.float64]]): The consistent mass matrix to be lumped.
+
+        Returns:
+            npt.NDArray[np.float64]: The lumped mass matrix as a 1D array (vector) of diagonal values.
         """
         M_total = M_consistent.sum()
         diag_sum = M_consistent.diagonal().sum()

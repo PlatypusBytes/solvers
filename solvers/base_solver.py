@@ -16,6 +16,9 @@ Matrix: TypeAlias = Union[npt.NDArray[np.float64], sp.spmatrix]
 
 
 class TimeIntegrationType(Enum):
+    """
+    Enum for time integration types.
+    """
     STATIC = auto()
     DYNAMIC = auto()
 
@@ -34,6 +37,9 @@ class BaseSolverABC(ABC):
     def u(self):
         """
         Dynamic accessor for displacement results from state.
+
+        Returns:
+            npt.NDArray[np.float64]: Displacement results from state.
         """
         return self.state.u
 
@@ -41,6 +47,9 @@ class BaseSolverABC(ABC):
     def v(self):
         """
         Dynamic accessor for velocity results from state.
+
+        Returns:
+            npt.NDArray[np.float64]: Velocity results from state.
         """
         return self.state.v
 
@@ -55,6 +64,9 @@ class BaseSolverABC(ABC):
     def time(self):
         """
         Dynamic accessor for the output time array from state.
+
+        Returns:
+            npt.NDArray[np.float64]: Output time array from state.
         """
         return self.state.output_time
 
@@ -62,6 +74,9 @@ class BaseSolverABC(ABC):
     def f(self):
         """
         Dynamic accessor for nodal force results from state.
+
+        Returns:
+            npt.NDArray[np.float64]: Nodal force results from state.
         """
         return self.state.f
 
