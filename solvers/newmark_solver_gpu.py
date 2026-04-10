@@ -3,9 +3,14 @@ import numpy.typing as npt
 from tqdm import tqdm
 from typing import Optional
 
-import cupy as cp
-import cupyx.scipy.sparse as cpsp
-import cupyx.scipy.sparse.linalg as cpspla
+try:
+    import cupy as cp
+    import cupyx.scipy.sparse as cpsp
+    import cupyx.scipy.sparse.linalg as cpspla
+except ImportError as _cupy_import_error:
+    cp = None
+    cpsp = None
+    cpspla = None
 
 from scipy.sparse import issparse as scipy_issparse
 
@@ -14,7 +19,7 @@ from solvers.preconditioners import PreconditionerABC
 from solvers.base_solver import BaseSolverABC, Force, State, Matrix, calculate_initial_acceleration, TimeIntegrationType
 
 
-def __to_gpu(arr):
+def _to_gpu(arr):
     """
     Transfer a CPU numpy array or scipy sparse matrix to the GPU.
 
@@ -61,6 +66,14 @@ class NewmarkImplicitForce(BaseSolverABC):
             max_iter (int): Maximum number of iterations for the Newton-Raphson scheme (default: 15)
             tolerance (float): Tolerance for convergence in the Newton-Raphson scheme (default: 1e-5)
         """
+        if cp is None:
+            raise ImportError(
+                "CuPy is required for the GPU solver but is not installed. "
+                "Install the package matching your CUDA version, e.g.:\n"
+                "  pip install \"cupy-cuda12x[ctk]\"   # CUDA 12.x\n"
+                "  pip install \"cupy-cuda13x[ctk]\"   # CUDA 13.x\n"
+                "See https://docs.cupy.dev/en/stable/install.html"
+            )
         self.beta = beta
         self.gamma = gamma
         self.linear_solver = linear_solver if linear_solver is not None else SparseDirectSolverLU()
@@ -136,9 +149,9 @@ class NewmarkImplicitForce(BaseSolverABC):
                                                self.linear_solver, self.preconditioner)
 
         # Send to GPU
-        M_gpu = __to_gpu(M)
-        C_gpu = __to_gpu(C)
-        K_gpu = __to_gpu(K)
+        M_gpu = _to_gpu(M)
+        C_gpu = _to_gpu(C)
+        K_gpu = _to_gpu(K)
 
         u = cp.asarray(u_cpu)
         v = cp.asarray(v_cpu)
@@ -194,11 +207,11 @@ class NewmarkImplicitForce(BaseSolverABC):
                 force_ext = d_force + m_part + c_part
 
                 # solve on GPU
-                du = cpspla.cg(K_till, force_ext - force_previous)
+                du, _ = cpspla.cg(K_till, force_ext - force_previous)
 
                 # set du for first iteration
                 if i == 0:
-                    du_ini = du.copy()
+                    du_ini = cp.copy(du)
 
                 # energy converge criterion according to bath 1996, chapter 8.4.4
                 error = float(cp.linalg.norm(du * force_ext) / cp.linalg.norm(du_ini * force_ext_prev))
@@ -344,9 +357,9 @@ class NewmarkExplicit(BaseSolverABC):
                                                self.linear_solver, self.preconditioner)
 
         # Transfer matrices and initial state to GPU
-        M_gpu = __to_gpu(M)
-        C_gpu = __to_gpu(C)
-        K_gpu = __to_gpu(K)
+        M_gpu = _to_gpu(M)
+        C_gpu = _to_gpu(C)
+        K_gpu = _to_gpu(K)
 
         u = cp.asarray(u_cpu)
         v = cp.asarray(v_cpu)
