@@ -1,3 +1,4 @@
+from __future__ import annotations
 import warnings
 from typing import Union, Optional
 from abc import ABC, abstractmethod
@@ -6,6 +7,13 @@ import numpy.typing as npt
 import scipy.sparse as sp
 from scipy.linalg import lu_factor, lu_solve
 from scipy.sparse.linalg import bicgstab, cg, spsolve, gmres
+
+try:
+    import cupy as cp
+    import cupyx.scipy.sparse as cps
+except ImportError:
+    cp = None
+    cps = None
 
 from solvers.preconditioners import PreconditionerABC
 
@@ -292,6 +300,40 @@ class BICSTABSolver(LinearSolversABC):
         x, info = bicgstab(A, b, M=M, rtol=self.rtol, maxiter=self.maxiter)
         if info != 0:
             raise RuntimeError(f"BiCGSTAB did not converge (info={info})")
+        return x
+
+
+class CGSolverGPU(LinearSolversABC):
+    """
+    Conjugate Gradient Solver on the GPU using CuPy
+    """
+    def __init__(self, rtol: float = 1e-12, maxiter: int =10_000):
+        """
+        Initializes the CG solver with relative tolerance and maximum iterations.
+        """
+        self.rtol = rtol
+        self.maxiter = maxiter
+
+    def solve(self,
+              A: cps.scipy.sparse.spmatrix,
+              b: cp.ndarray,
+              M: Optional[PreconditionerABC] = None,
+              ) -> cp.ndarray:
+        """
+        Solve Ax = b using the Conjugate Gradient method on the GPU.
+
+        Args:
+            A (cps.scipy.sparse.spmatrix): The system matrix.
+            b (cp.ndarray): The right-hand side vector.
+            M (Optional[PreconditionerABC]): Preconditioner (only for iterative solvers).
+
+        Returns:
+            cp.ndarray: The solution vector.
+        """
+        x, info = cps.linalg.cg(A, b, M=M, rtol=self.rtol, maxiter=self.maxiter)
+
+        if info != 0:
+            raise RuntimeError(f"CG did not converge (info={info})")
         return x
 
 

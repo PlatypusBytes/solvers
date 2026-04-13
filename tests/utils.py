@@ -10,7 +10,14 @@ from solvers.central_difference_solver import CentralDifferenceSolver
 from solvers.bathe_solver import BatheSolver
 from solvers.HHT_solver import HHTImplicitForce, HHTExplicit
 from solvers.zhai_solver import ZhaiSolver
-from solvers.static_solver import StaticSolver
+
+
+def has_cupy():
+    try:
+        import cupy
+        return True
+    except ImportError:
+        return False
 
 
 def set_matrices_as_sparse(M, K, C, F):
