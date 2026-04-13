@@ -518,9 +518,9 @@ class NewmarkImplicitForceGPU(BaseSolverABC):
         M_gpu = _to_gpu(M)
         C_gpu = _to_gpu(C)
         K_gpu = _to_gpu(K)
-        d_force = cp.asarray(d_force_cpu)
-        u = cp.asarray(u_cpu)
-        v = cp.asarray(v_cpu)
+        d_force = cp.asarray(d_force_cpu, dtype=cp.float64)
+        u = cp.asarray(u_cpu, dtype=cp.float64)
+        v = cp.asarray(v_cpu, dtype=cp.float64)
 
         a = calculate_initial_acceleration(M_gpu, C_gpu, K_gpu, d_force, u, v,
                                            self.linear_solver, self.preconditioner)
@@ -577,7 +577,7 @@ class NewmarkImplicitForceGPU(BaseSolverABC):
 
                 # update external force
                 d_force_cpu_i, F_previous_i_cpu = self.force.update_force(u_current, F_previous_cpu, t)
-                d_force = cp.asarray(d_force_cpu_i)
+                d_force = cp.asarray(d_force_cpu_i, dtype=cp.float64)
 
                 # external force
                 force_ext = d_force + m_part + c_part
@@ -734,9 +734,9 @@ class NewmarkExplicitGPU(BaseSolverABC):
         M_gpu = _to_gpu(M)
         C_gpu = _to_gpu(C)
         K_gpu = _to_gpu(K)
-        d_force = cp.asarray(d_force_cpu)
-        u = cp.asarray(u_cpu)
-        v = cp.asarray(v_cpu)
+        d_force = cp.asarray(d_force_cpu, dtype=cp.float64)
+        u = cp.asarray(u_cpu, dtype=cp.float64)
+        v = cp.asarray(v_cpu, dtype=cp.float64)
 
         a = calculate_initial_acceleration(M_gpu, C_gpu, K_gpu, d_force, u, v,
                                            self.linear_solver, self.preconditioner)
@@ -780,7 +780,7 @@ class NewmarkExplicitGPU(BaseSolverABC):
 
             # update external force (CPU) and convert increment to GPU
             d_force_cpu, F_previous_cpu = self.force.update_force(u_current, F_previous_cpu, t)
-            d_force = cp.asarray(d_force_cpu)
+            d_force = cp.asarray(d_force_cpu, dtype=cp.float64)
 
             # external force
             force_ext = d_force + m_part + c_part
@@ -826,5 +826,5 @@ def _to_gpu(arr):
         arr: A numpy array or scipy sparse matrix.
     """
     if scipy_issparse(arr):
-        return cpsp.csc_matrix(arr)
-    return cp.asarray(arr)
+        return cpsp.csc_matrix(arr, dtype=cp.float64)
+    return cp.asarray(arr, dtype=cp.float64)
