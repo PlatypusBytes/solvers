@@ -501,9 +501,9 @@ class NewmarkImplicitForceGPU(BaseSolverABC):
             (t_end_idx - t_start_idx))
 
         # constants for the Newmark integration - transfer to GPU
-        beta = cp.array(self.beta)
-        gamma = cp.array(self.gamma)
-        t_step = cp.array(t_step)
+        beta = cp.array(self.beta, dtype=cp.float64)
+        gamma = cp.array(self.gamma, dtype=cp.float64)
+        t_step = cp.array(t_step, dtype=cp.float64)
 
         # CPU initial conditions
         u_cpu = self.state.u0
@@ -717,9 +717,9 @@ class NewmarkExplicitGPU(BaseSolverABC):
         t_step = (self.state.time[t_end_idx] - self.state.time[t_start_idx]) / ((t_end_idx - t_start_idx))
 
         # constants for the Newmark integration - transfer to GPU
-        beta = cp.array(self.beta)
-        gamma = cp.array(self.gamma)
-        t_step = cp.array(t_step)
+        beta = cp.array(self.beta, dtype=cp.float64)
+        gamma = cp.array(self.gamma, dtype=cp.float64)
+        t_step = cp.array(t_step, dtype=cp.float64)
 
         # initial force conditions: for computation of initial acceleration (CPU)
         self.force.update_rhs_at_time_step(t_start_idx)
@@ -786,7 +786,6 @@ class NewmarkExplicitGPU(BaseSolverABC):
             force_ext = d_force + m_part + c_part
 
             # solve on GPU
-            du, _ = cpspla.cg(K_till, force_ext)
             du = self.linear_solver.solve(K_till, force_ext, M=pre_c)
 
             # velocity calculated through Newmark relation

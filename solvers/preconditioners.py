@@ -49,7 +49,7 @@ class JacobiPreconditionerGPU(PreconditionerABC):
     """
     Jacobi preconditioner: P = diag(A) on the GPU
     """
-    def build(self, A:  cps.scipy.sparse.spmatrix) -> cps.linalg.LinearOperator:
+    def build(self, A: cps.spmatrix) -> cps.linalg.LinearOperator:
         """
         Builds the Jacobi preconditioner for sparse matrix A
 
