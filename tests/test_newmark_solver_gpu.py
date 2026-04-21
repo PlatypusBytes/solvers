@@ -9,6 +9,7 @@ from solvers.linear_equations_solvers import CGSolverGPU
 from tests.utils import (
     set_matrices_as_sparse,
     set_matrices_as_np_array,
+    has_cupy,
 )
 
 
@@ -46,6 +47,7 @@ def setup_module():
     return M, K, C, F, n_steps, time, number_eq
 
 
+@pytest.mark.skipif(not has_cupy(), reason="CuPy not installed")
 @pytest.mark.parametrize("preconditioner", [None, JacobiPreconditionerGPU])
 @pytest.mark.parametrize("newmark", [NewmarkExplicitGPU, NewmarkImplicitForceGPU])
 def test_newmark_sparse(setup_module, preconditioner, newmark):
@@ -91,6 +93,7 @@ def test_newmark_sparse(setup_module, preconditioner, newmark):
     )
 
 
+@pytest.mark.skipif(not has_cupy(), reason="CuPy not installed")
 @pytest.mark.parametrize("preconditioner", [None, JacobiPreconditionerGPU])
 @pytest.mark.parametrize("newmark", [NewmarkExplicitGPU, NewmarkImplicitForceGPU])
 def test_newmark_sparse_output_int(setup_module, preconditioner, newmark):
@@ -126,6 +129,7 @@ def test_newmark_sparse_output_int(setup_module, preconditioner, newmark):
     )
 
 
+@pytest.mark.skipif(not has_cupy(), reason="CuPy not installed")
 @pytest.mark.parametrize("preconditioner", [None, JacobiPreconditionerGPU])
 @pytest.mark.parametrize("newmark", [NewmarkExplicitGPU, NewmarkImplicitForceGPU])
 def test_newmark_sparse_output_int_staged(setup_module, preconditioner, newmark):
@@ -181,6 +185,7 @@ def test_newmark_sparse_output_int_staged(setup_module, preconditioner, newmark)
     )
 
 
+@pytest.mark.skipif(not has_cupy(), reason="CuPy not installed")
 @pytest.mark.parametrize("newmark", [NewmarkExplicitGPU, NewmarkImplicitForceGPU])
 def test_newmark_dense(setup_module, newmark):
     """
@@ -222,6 +227,7 @@ def test_newmark_dense(setup_module, newmark):
     )
 
 
+@pytest.mark.skipif(not has_cupy(), reason="CuPy not installed")
 @pytest.mark.parametrize("preconditioner", [None, JacobiPreconditionerGPU])
 @pytest.mark.parametrize("newmark", [NewmarkExplicitGPU, NewmarkImplicitForceGPU])
 def test_newmark_two_stages(setup_module, preconditioner, newmark):
@@ -302,6 +308,7 @@ def test_newmark_two_stages(setup_module, preconditioner, newmark):
                                                                                         ))
 
 
+@pytest.mark.skipif(not has_cupy(), reason="CuPy not installed")
 @pytest.mark.parametrize("preconditioner", [None, JacobiPreconditionerGPU])
 @pytest.mark.parametrize("newmark", [NewmarkExplicitGPU, NewmarkImplicitForceGPU])
 def test_newmark_static(setup_module, preconditioner, newmark):
