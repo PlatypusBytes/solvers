@@ -14,8 +14,8 @@ except ImportError:
     cpsp = None
     cpspla = None
 
-from solvers.linear_equations_solvers import LinearSolversABC, SparseDirectSolverLU
-from solvers.preconditioners import PreconditionerABC
+from solvers.linear_equations_solvers import LinearSolversABC, SparseDirectSolverLU, CGSolverGPU
+from solvers.preconditioners import PreconditionerABC, JacobiPreconditionerGPU
 from solvers.base_solver import BaseSolverABC, Force, State, Matrix, calculate_initial_acceleration, TimeIntegrationType
 
 
@@ -444,7 +444,11 @@ class NewmarkImplicitForceGPU(BaseSolverABC):
             )
         self.beta = beta
         self.gamma = gamma
-        self.linear_solver = linear_solver if linear_solver is not None else SparseDirectSolverLU()
+        if linear_solver not in (None, CGSolverGPU()):
+            raise ValueError("For the explicit GPU solver, the linear_solver must be CGSolverGPU or None.")
+        if preconditioner not in (None, JacobiPreconditionerGPU()):
+            raise ValueError("For the explicit GPU solver, the preconditioner must be JacobiPreconditionerGPU or None.")
+        self.linear_solver = linear_solver if linear_solver is not None else CGSolverGPU()
         self.preconditioner = preconditioner
         self.force = force if force is not None else Force()
         self.state = state if state is not None else State()
@@ -608,6 +612,9 @@ class NewmarkImplicitForceGPU(BaseSolverABC):
                 if not converged:
                     force_previous = force_ext.copy()
 
+                # update u_current so the next NR iteration sees the updated displacement
+                u_current = u.get()
+
                 i += 1
 
             # acceleration calculated through Newmark relation
@@ -663,7 +670,11 @@ class NewmarkExplicitGPU(BaseSolverABC):
         """
         self.beta = beta
         self.gamma = gamma
-        self.linear_solver = linear_solver if linear_solver is not None else SparseDirectSolverLU()
+        if linear_solver not in (None, CGSolverGPU()):
+            raise ValueError("For the explicit GPU solver, the linear_solver must be CGSolverGPU or None.")
+        if preconditioner not in (None, JacobiPreconditionerGPU()):
+            raise ValueError("For the explicit GPU solver, the preconditioner must be JacobiPreconditionerGPU or None.")
+        self.linear_solver = linear_solver if linear_solver is not None else CGSolverGPU()
         self.preconditioner = preconditioner
         self.force = force if force is not None else Force()
         self.state = state if state is not None else State()
