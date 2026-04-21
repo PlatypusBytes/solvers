@@ -9,9 +9,6 @@ from solvers.linear_equations_solvers import CGSolverGPU
 from tests.utils import (
     set_matrices_as_sparse,
     set_matrices_as_np_array,
-    ALL_LINEAR_SOLVERS,
-    ALL_PRECONDITIONERS,
-    ALL_DENSE_LINEAR_SOLVERS
 )
 
 

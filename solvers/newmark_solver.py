@@ -444,9 +444,9 @@ class NewmarkImplicitForceGPU(BaseSolverABC):
             )
         self.beta = beta
         self.gamma = gamma
-        if linear_solver not in (None, CGSolverGPU()):
+        if linear_solver is not None and not isinstance(linear_solver, CGSolverGPU):
             raise ValueError("For the explicit GPU solver, the linear_solver must be CGSolverGPU or None.")
-        if preconditioner not in (None, JacobiPreconditionerGPU()):
+        if preconditioner is not None and not isinstance(preconditioner, JacobiPreconditionerGPU):
             raise ValueError("For the explicit GPU solver, the preconditioner must be JacobiPreconditionerGPU or None.")
         self.linear_solver = linear_solver if linear_solver is not None else CGSolverGPU()
         self.preconditioner = preconditioner
@@ -670,9 +670,9 @@ class NewmarkExplicitGPU(BaseSolverABC):
         """
         self.beta = beta
         self.gamma = gamma
-        if linear_solver not in (None, CGSolverGPU()):
+        if linear_solver is not None and not isinstance(linear_solver, CGSolverGPU):
             raise ValueError("For the explicit GPU solver, the linear_solver must be CGSolverGPU or None.")
-        if preconditioner not in (None, JacobiPreconditionerGPU()):
+        if preconditioner is not None and not isinstance(preconditioner, JacobiPreconditionerGPU):
             raise ValueError("For the explicit GPU solver, the preconditioner must be JacobiPreconditionerGPU or None.")
         self.linear_solver = linear_solver if linear_solver is not None else CGSolverGPU()
         self.preconditioner = preconditioner
