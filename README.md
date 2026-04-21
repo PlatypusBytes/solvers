@@ -96,7 +96,7 @@ cd solvers
 pip install .
 ```
 
-For GPU support (optional), install the CuPy package that matches your local CUDA version:
+For GPU support (optional), install the CuPy package that matches your local CUDA version.
 
 ```bash
 pip install "cupy-cuda11x[ctk]"   # CUDA 11.x
@@ -104,10 +104,12 @@ pip install "cupy-cuda12x[ctk]"   # CUDA 12.x
 pip install "cupy-cuda13x[ctk]"   # CUDA 13.x
 ```
 
+To check your CUDA version, run `nvcc --version` or `nvidia-smi` in the terminal.
+
 See the [CuPy installation guide](https://docs.cupy.dev/en/stable/install.html) to find the right package for your system.
 The rest of the library works without CuPy.
 
 
 ## License
 
-[MIT](license)
+[MIT](LICENSE)
