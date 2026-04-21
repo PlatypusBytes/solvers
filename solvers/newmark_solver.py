@@ -399,7 +399,7 @@ class NewmarkExplicit(BaseSolverABC):
 
 
 
-class NewmarkImplicitForceGPU(BaseSolverABC):
+class NewmarkImplicitForceGPU(BaseSolverABC):  # pragma: no cover
     """
     Implicit Newmark Solver class (GPU-accelerated with CuPy).
 
@@ -641,7 +641,7 @@ class NewmarkImplicitForceGPU(BaseSolverABC):
         pbar.close()
 
 
-class NewmarkExplicitGPU(BaseSolverABC):
+class NewmarkExplicitGPU(BaseSolverABC):  # pragma: no cover
     """
     Explicit Newmark Solver class (GPU-accelerated with CuPy).
 

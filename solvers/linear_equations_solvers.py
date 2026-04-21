@@ -303,7 +303,7 @@ class BICSTABSolver(LinearSolversABC):
         return x
 
 
-class CGSolverGPU(LinearSolversABC):
+class CGSolverGPU(LinearSolversABC):  # pragma: no cover
     """
     Conjugate Gradient Solver on the GPU using CuPy
     """

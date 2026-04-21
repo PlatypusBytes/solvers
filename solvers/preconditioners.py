@@ -45,7 +45,7 @@ class JacobiPreconditioner(PreconditionerABC):
         return M_op
 
 
-class JacobiPreconditionerGPU(PreconditionerABC):
+class JacobiPreconditionerGPU(PreconditionerABC):  # pragma: no cover
     """
     Jacobi preconditioner: P = diag(A) on the GPU
     """
