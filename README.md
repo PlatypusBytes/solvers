@@ -1,5 +1,6 @@
 ![Tests](https://github.com/PlatypusBytes/solvers/actions/workflows/workflow.yml/badge.svg)
 [![codecov](https://codecov.io/gh/PlatypusBytes/solvers/graph/badge.svg?token=CRWV3A3WLR)](https://codecov.io/gh/PlatypusBytes/solvers)
+[![PyPI version](https://img.shields.io/pypi/v/PuggleSolvers.svg)](https://pypi.org/project/PuggleSolvers/)
 
 # PuggleSolvers
 
@@ -16,7 +17,7 @@
 
 $$M\ddot{u} + C\dot{u} + Ku = F(t)$$
 
-where $M$ is the mass matrix, $C$ is the damping matrix, $K$ is the stiffness matrix, $u$ is the displacement vector, and $F(t)$ is the external force vector.
+where $M$ is the mass matrix, $C$ is the damping matrix, $K$ is the stiffness matrix, $u$ is the displacement vector, and $F(t)$ is the external force vector as a function of time.
 
 It targets finite-element workflows and supports both dense and sparse matrices, optional GPU acceleration via CuPy, and non-linear force callbacks.
 
@@ -28,7 +29,7 @@ It targets finite-element workflows and supports both dense and sparse matrices,
 |---|---|
 | `StaticSolver` | `solvers.static_solver` |
 
-Solves $Ku = F$ using an incremental formulation. Supports non-linear force callbacks.
+Solves $Ku = F(t)$ using an incremental formulation. Supports non-linear force callbacks.
 
 ### Dynamic (time-integration)
 
@@ -128,7 +129,8 @@ cd solvers
 pip install .
 ```
 
-For GPU support (optional), install the CuPy package that matches your local CUDA version.
+For GPU support (optional), install the CuPy package that matches your local CUDA installation.
+This requires an NVIDIA GPU and a compatible CUDA Toolkit version installed on your system.
 
 ```bash
 pip install "cupy-cuda11x[ctk]"   # CUDA 11.x
@@ -136,7 +138,7 @@ pip install "cupy-cuda12x[ctk]"   # CUDA 12.x
 pip install "cupy-cuda13x[ctk]"   # CUDA 13.x
 ```
 
-To check your CUDA version, run `nvcc --version` or `nvidia-smi` in the terminal.
+To check your CUDA version, run `nvidia-smi` in the terminal.
 
 See the [CuPy installation guide](https://docs.cupy.dev/en/stable/install.html) to find the right package for your system.
 The rest of the library works without CuPy.
