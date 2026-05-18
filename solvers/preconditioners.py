@@ -1,3 +1,4 @@
+from __future__ import annotations
 from abc import ABC, abstractmethod
 
 import numpy as np
@@ -6,7 +7,10 @@ import scipy.sparse as sp
 from scipy.sparse import tril, triu
 from scipy.sparse.linalg import LinearOperator
 from scipy.sparse.linalg import spsolve_triangular, spilu
-
+try:
+    import cupyx.scipy.sparse as cps
+except ImportError:
+    cps = None
 
 class PreconditionerABC(ABC):
     """
@@ -38,6 +42,25 @@ class JacobiPreconditioner(PreconditionerABC):
         """
         diag = A.diagonal()
         M_op = LinearOperator(shape=A.shape, matvec=lambda v: v / diag, dtype=A.dtype)
+        return M_op
+
+
+class JacobiPreconditionerGPU(PreconditionerABC):  # pragma: no cover
+    """
+    Jacobi preconditioner: P = diag(A) on the GPU
+    """
+    def build(self, A: cps.spmatrix) -> cps.linalg.LinearOperator:
+        """
+        Builds the Jacobi preconditioner for sparse matrix A
+
+        Args:
+            A (cps.scipy.sparse.spmatrix): The system sparse matrix to precondition.
+
+        Returns:
+            LinearOperator representing the preconditioner (approximation of A^{-1})
+        """
+        diag = A.diagonal()
+        M_op = cps.linalg.LinearOperator(shape=A.shape, matvec=lambda v: v / diag, dtype=A.dtype)
         return M_op
 
 

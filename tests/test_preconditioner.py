@@ -3,7 +3,8 @@ import pytest
 import numpy as np
 from scipy.sparse import csr_matrix
 
-from solvers.preconditioners import JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner
+from solvers.preconditioners import JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner, JacobiPreconditionerGPU
+from tests.utils import has_cupy
 
 
 @pytest.fixture
@@ -41,6 +42,28 @@ def test_jacobi(test_matrix, test_vector):
     expected = v / diag
 
     np.testing.assert_allclose(result, expected)
+
+
+@pytest.mark.skipif(not has_cupy(), reason="CuPy not installed")
+def test_jacobiGPU(test_matrix, test_vector):
+    """
+    Test that the JACOBI preconditioner correctly applies the inverse of the diagonal.
+
+    Args:
+        test_matrix: Fixture providing a test matrix
+        test_vector: Fixture providing a test vector
+    """
+    A = test_matrix
+    v = test_vector
+
+    M = JacobiPreconditionerGPU().build(A)
+    result = M @ v
+
+    diag = np.diag(A.toarray())
+    expected = v / diag
+
+    np.testing.assert_allclose(result, expected)
+
 
 def test_ssor(test_matrix, test_vector):
     """

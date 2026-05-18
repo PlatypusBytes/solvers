@@ -2,15 +2,24 @@ import pytest
 import numpy as np
 from scipy import sparse
 
+try:
+    import cupy as cp
+    import cupyx.scipy.sparse as cpsp
+except ImportError:
+    cp = None
+    cpsp = None
+
 from solvers.linear_equations_solvers import (
     DenseDirectSolver,
     SparseDirectSolver,
     SparseDirectSolverLU,
     CGSolver,
+    CGSolverGPU,
     GMRESSolver,
     BICSTABSolver,
 )
-from solvers.preconditioners import JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner
+from solvers.preconditioners import JacobiPreconditioner, SSORPreconditioner, ILUPreconditioner, JacobiPreconditionerGPU
+from tests.utils import has_cupy
 
 
 @pytest.fixture
@@ -87,3 +96,32 @@ def test_iterative_solvers_handle_spd_system(spd_system, solver_cls, preconditio
     x = solver.solve(A_sparse, b, M=pre_c)
     np.testing.assert_allclose(x, x_expected)
     np.testing.assert_allclose(A_sparse.dot(x), b)
+
+
+@pytest.mark.parametrize("solver_cls", [CGSolverGPU])
+@pytest.mark.parametrize("preconditioner", [None, JacobiPreconditionerGPU])
+@pytest.mark.skipif(not has_cupy(), reason="CuPy not installed")
+def test_iterative_solvers_GPU(spd_system, solver_cls, preconditioner):
+    """
+    Test that iterative solvers correctly solve a SPD system with and without a Jacobi preconditioner.
+    Args:
+        spd_system: Fixture providing a SPD system
+        solver_cls: Solver class to test
+        preconditioner: Preconditioner class or None
+    """
+
+    _, A_sparse, b, x_expected = spd_system
+
+    A_sparse_gpu = cpsp.csc_matrix(A_sparse)
+    b_gpu = cp.asarray(b)
+
+    solver = solver_cls()
+
+    if preconditioner is not None:
+        pre_c = preconditioner().build(A_sparse_gpu)
+    else:
+        pre_c = None
+
+    x = solver.solve(A_sparse_gpu, b_gpu, M=pre_c)
+    np.testing.assert_allclose(x.get(), x_expected)
+    np.testing.assert_allclose(A_sparse_gpu.dot(x).get(), b)
