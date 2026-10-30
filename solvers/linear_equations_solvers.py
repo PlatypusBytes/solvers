@@ -11,9 +11,11 @@ from scipy.sparse.linalg import bicgstab, cg, spsolve, gmres
 try:
     import cupy as cp
     import cupyx.scipy.sparse as cps
+    import cupyx.scipy.sparse.linalg as cpspla
 except ImportError:
     cp = None
     cps = None
+    cpspla = None
 
 from solvers.preconditioners import PreconditionerABC
 
@@ -387,7 +389,7 @@ class CGSolverGPU(LinearSolversABC):  # pragma: no cover
             cp.ndarray: The solution vector.
         """
         counter = _IterationCounter()
-        x, info = cps.linalg.cg(A, b, x0=x0, M=M, rtol=self.rtol, maxiter=self.maxiter, callback=counter)
+        x, info = cpspla.cg(A, b, x0=x0, M=M, rtol=self.rtol, maxiter=self.maxiter, callback=counter)
         self.iterations.append(counter.count)
 
         if info != 0:
