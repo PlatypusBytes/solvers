@@ -9,8 +9,10 @@ from scipy.sparse.linalg import LinearOperator
 from scipy.sparse.linalg import spsolve_triangular, spilu
 try:
     import cupyx.scipy.sparse as cps
+    import cupyx.scipy.sparse.linalg as cpspla
 except ImportError:
     cps = None
+    cpspla = None
 
 class PreconditionerABC(ABC):
     """
@@ -49,7 +51,7 @@ class JacobiPreconditionerGPU(PreconditionerABC):  # pragma: no cover
     """
     Jacobi preconditioner: P = diag(A) on the GPU
     """
-    def build(self, A: cps.spmatrix) -> cps.linalg.LinearOperator:
+    def build(self, A: cps.spmatrix) -> cpspla.LinearOperator:
         """
         Builds the Jacobi preconditioner for sparse matrix A
 
@@ -60,7 +62,7 @@ class JacobiPreconditionerGPU(PreconditionerABC):  # pragma: no cover
             LinearOperator representing the preconditioner (approximation of A^{-1})
         """
         diag = A.diagonal()
-        M_op = cps.linalg.LinearOperator(shape=A.shape, matvec=lambda v: v / diag, dtype=A.dtype)
+        M_op = cpspla.LinearOperator(shape=A.shape, matvec=lambda v: v / diag, dtype=A.dtype)
         return M_op
 
 
