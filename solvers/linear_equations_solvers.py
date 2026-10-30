@@ -1,6 +1,6 @@
 from __future__ import annotations
 import warnings
-from typing import Union, Optional
+from typing import List, Union, Optional
 from abc import ABC, abstractmethod
 import numpy as np
 import numpy.typing as npt
@@ -18,6 +18,26 @@ except ImportError:
 from solvers.preconditioners import PreconditionerABC
 
 
+class _IterationCounter:
+    """
+    Callback of the scipy and CuPy iterative solvers that counts their iterations.
+    """
+    def __init__(self):
+        """
+        Initializes the counter at zero.
+        """
+        self.count = 0
+
+    def __call__(self, *args):
+        """
+        Called by the iterative solver after every iteration.
+
+        Args:
+            *args: Current iterate or residual norm, depending on the solver (not used).
+        """
+        self.count += 1
+
+
 class LinearSolversABC(ABC):
     """
     Abstract base class for solvers
@@ -27,6 +47,7 @@ class LinearSolversABC(ABC):
               A: Union[npt.NDArray[np.float64], sp.spmatrix],
               b: npt.NDArray[np.float64],
               M: Optional[PreconditionerABC] = None,
+              x0: Optional[npt.NDArray[np.float64]] = None,
               ) -> npt.NDArray[np.float64]:
         """
         Solve Ax = b
@@ -35,6 +56,7 @@ class LinearSolversABC(ABC):
             A (Union[npt.NDArray[np.float64], sp.spmatrix]): The system matrix.
             b (npt.NDArray[np.float64]): The right-hand side vector.
             M (Optional[PreconditionerABC]): Preconditioner (only for iterative solvers).
+            x0 (Optional[npt.NDArray[np.float64]]): Initial guess (only for iterative solvers, default: zero).
 
         Returns:
             npt.NDArray[np.float64]: The solution vector.
@@ -59,6 +81,7 @@ class DenseDirectSolver(LinearSolversABC):
               A: npt.NDArray[np.float64],
               b: npt.NDArray[np.float64],
               M: Optional[PreconditionerABC] = None,
+              x0: Optional[npt.NDArray[np.float64]] = None,
               ) -> npt.NDArray[np.float64]:
         """
         Solve A x = b using direct inversion.
@@ -67,6 +90,7 @@ class DenseDirectSolver(LinearSolversABC):
             A (npt.NDArray[np.float64]): The system matrix.
             b (npt.NDArray[np.float64]): The right-hand side vector.
             M (Optional[PreconditionerABC]): Preconditioner (only for iterative solvers).
+            x0 (Optional[npt.NDArray[np.float64]]): Initial guess (only for iterative solvers, not used here).
         Returns:
             npt.NDArray[np.float64]: The solution vector.
         """
@@ -124,6 +148,7 @@ class SparseDirectSolverLU(LinearSolversABC):
               A: sp.spmatrix,
               b: npt.NDArray[np.float64],
               M: Optional[PreconditionerABC] = None,
+              x0: Optional[npt.NDArray[np.float64]] = None,
               ) -> npt.NDArray[np.float64]:
         """
         Solve Ax = b using using direct inversion.
@@ -132,6 +157,7 @@ class SparseDirectSolverLU(LinearSolversABC):
             A (sp.spmatrix): The system matrix.
             b (npt.NDArray[np.float64]): The right-hand side vector.
             M (Optional[PreconditionerABC]): Preconditioner (only for iterative solvers).
+            x0 (Optional[npt.NDArray[np.float64]]): Initial guess (only for iterative solvers, not used here).
 
         Returns:
             npt.NDArray[np.float64]: The solution vector.
@@ -187,6 +213,7 @@ class SparseDirectSolver(LinearSolversABC):
               A: sp.spmatrix,
               b: npt.NDArray[np.float64],
               M: Optional[PreconditionerABC] = None,
+              x0: Optional[npt.NDArray[np.float64]] = None,
               ) -> npt.NDArray[np.float64]:
         """
         Solve Ax = b using using direct inversion.
@@ -195,6 +222,7 @@ class SparseDirectSolver(LinearSolversABC):
             A (sp.spmatrix): The system matrix.
             b (npt.NDArray[np.float64]): The right-hand side vector.
             M (Optional[PreconditionerABC]): Preconditioner (only for iterative solvers).
+            x0 (Optional[npt.NDArray[np.float64]]): Initial guess (only for iterative solvers, not used here).
 
         Returns:
             npt.NDArray[np.float64]: The solution vector.
@@ -215,24 +243,31 @@ class CGSolver(LinearSolversABC):
         """
         self.rtol = rtol
         self.maxiter = maxiter
+        # number of iterations of every solve, in the order of the solves
+        self.iterations: List[int] = []
 
     def solve(self,
               A: sp.spmatrix,
               b: npt.NDArray[np.float64],
               M: Optional[PreconditionerABC] = None,
+              x0: Optional[npt.NDArray[np.float64]] = None,
               ) -> npt.NDArray[np.float64]:
         """
         Solve Ax = b using the Conjugate Gradient method.
+        The number of iterations is appended to `iterations`.
 
         Args:
             A (sp.spmatrix): The system matrix.
             b (npt.NDArray[np.float64]): The right-hand side vector.
             M (Optional[PreconditionerABC]): Preconditioner (only for iterative solvers).
+            x0 (Optional[npt.NDArray[np.float64]]): Initial guess (default: zero).
 
         Returns:
             npt.NDArray[np.float64]: The solution vector.
         """
-        x, info = cg(A, b, M=M, rtol=self.rtol, maxiter=self.maxiter)
+        counter = _IterationCounter()
+        x, info = cg(A, b, x0=x0, M=M, rtol=self.rtol, maxiter=self.maxiter, callback=counter)
+        self.iterations.append(counter.count)
         if info != 0:
             raise RuntimeError(f"CG did not converge (info={info})")
         return x
@@ -248,24 +283,33 @@ class GMRESSolver(LinearSolversABC):
         """
         self.rtol = rtol
         self.maxiter = maxiter
+        # number of inner iterations of every solve, in the order of the solves
+        self.iterations: List[int] = []
 
     def solve(self,
               A: sp.spmatrix,
               b: npt.NDArray[np.float64],
               M: Optional[PreconditionerABC] = None,
+              x0: Optional[npt.NDArray[np.float64]] = None,
               ) -> npt.NDArray[np.float64]:
         """
         Solve Ax = b using the Generalized Minimal Residual (GMRES) method.
+        The number of inner iterations is appended to `iterations`.
 
         Args:
             A (sp.spmatrix): The system matrix.
             b (npt.NDArray[np.float64]): The right-hand side vector.
             M (Optional[PreconditionerABC]): Preconditioner (only for iterative solvers).
+            x0 (Optional[npt.NDArray[np.float64]]): Initial guess (default: zero).
 
         Returns:
             npt.NDArray[np.float64]: The solution vector.
         """
-        x, info = gmres(A, b, M=M, rtol=self.rtol, maxiter=self.maxiter)
+        counter = _IterationCounter()
+        # pr_norm calls back after every inner iteration, the legacy default after every restart
+        x, info = gmres(A, b, x0=x0, M=M, rtol=self.rtol, maxiter=self.maxiter, callback=counter,
+                        callback_type="pr_norm")
+        self.iterations.append(counter.count)
         if info != 0:
             raise RuntimeError(f"GMRES did not converge (info={info})")
         return x
@@ -280,24 +324,31 @@ class BICSTABSolver(LinearSolversABC):
         """
         self.rtol = rtol
         self.maxiter = maxiter
+        # number of iterations of every solve, in the order of the solves
+        self.iterations: List[int] = []
 
     def solve(self,
               A: sp.spmatrix,
               b: npt.NDArray[np.float64],
               M: Optional[PreconditionerABC] = None,
+              x0: Optional[npt.NDArray[np.float64]] = None,
               ) -> npt.NDArray[np.float64]:
         """
         Solve Ax = b using the Biconjugate Gradient Stabilized (BiCGSTAB) method.
+        The number of iterations is appended to `iterations`.
 
         Args:
             A (sp.spmatrix): The system matrix.
             b (npt.NDArray[np.float64]): The right-hand side vector.
             M (Optional[PreconditionerABC]): Preconditioner (only for iterative solvers).
+            x0 (Optional[npt.NDArray[np.float64]]): Initial guess (default: zero).
 
         Returns:
             npt.NDArray[np.float64]: The solution vector.
         """
-        x, info = bicgstab(A, b, M=M, rtol=self.rtol, maxiter=self.maxiter)
+        counter = _IterationCounter()
+        x, info = bicgstab(A, b, x0=x0, M=M, rtol=self.rtol, maxiter=self.maxiter, callback=counter)
+        self.iterations.append(counter.count)
         if info != 0:
             raise RuntimeError(f"BiCGSTAB did not converge (info={info})")
         return x
@@ -313,24 +364,31 @@ class CGSolverGPU(LinearSolversABC):  # pragma: no cover
         """
         self.rtol = rtol
         self.maxiter = maxiter
+        # number of iterations of every solve, in the order of the solves
+        self.iterations: List[int] = []
 
     def solve(self,
               A: cps.scipy.sparse.spmatrix,
               b: cp.ndarray,
               M: Optional[PreconditionerABC] = None,
+              x0: Optional[cp.ndarray] = None,
               ) -> cp.ndarray:
         """
         Solve Ax = b using the Conjugate Gradient method on the GPU.
+        The number of iterations is appended to `iterations`.
 
         Args:
             A (cps.scipy.sparse.spmatrix): The system matrix.
             b (cp.ndarray): The right-hand side vector.
             M (Optional[PreconditionerABC]): Preconditioner (only for iterative solvers).
+            x0 (Optional[cp.ndarray]): Initial guess (default: zero).
 
         Returns:
             cp.ndarray: The solution vector.
         """
-        x, info = cps.linalg.cg(A, b, M=M, rtol=self.rtol, maxiter=self.maxiter)
+        counter = _IterationCounter()
+        x, info = cps.linalg.cg(A, b, x0=x0, M=M, rtol=self.rtol, maxiter=self.maxiter, callback=counter)
+        self.iterations.append(counter.count)
 
         if info != 0:
             raise RuntimeError(f"CG did not converge (info={info})")
