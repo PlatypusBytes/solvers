@@ -1,6 +1,6 @@
-numpy==2.2.0
-pytest==8.4.0
-pytest-cov==6.2.1
-scipy==1.15.3
-tox==4.26.0
-tqdm==4.67.1
+numpy==2.4.6
+pytest==9.2.0
+pytest-cov==7.1.0
+scipy==1.17.1
+tox==4.67.4
+tqdm==4.70.1
